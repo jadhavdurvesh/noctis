@@ -29,15 +29,22 @@ impl Node {
     }
 
     pub fn attribute(&self, name: &str) -> Option<&str> {
-        let Self::Element { attributes, .. } = self else { return None };
-        attributes.iter()
+        let Self::Element { attributes, .. } = self else {
+            return None;
+        };
+        attributes
+            .iter()
             .find(|attr| attr.name.eq_ignore_ascii_case(name))
             .and_then(|attr| attr.value.as_deref())
     }
 
     pub fn has_attribute(&self, name: &str) -> bool {
-        let Self::Element { attributes, .. } = self else { return false };
-        attributes.iter().any(|attr| attr.name.eq_ignore_ascii_case(name))
+        let Self::Element { attributes, .. } = self else {
+            return false;
+        };
+        attributes
+            .iter()
+            .any(|attr| attr.name.eq_ignore_ascii_case(name))
     }
 
     /// Stable diagnostic tree output; not an HTML serializer.
@@ -47,9 +54,15 @@ impl Node {
             match node {
                 Node::Document(children) => {
                     out.push_str(&format!("{indent}#document\n"));
-                    for child in children { visit(child, depth + 1, out); }
+                    for child in children {
+                        visit(child, depth + 1, out);
+                    }
                 }
-                Node::Element { name, attributes, children } => {
+                Node::Element {
+                    name,
+                    attributes,
+                    children,
+                } => {
                     out.push_str(&format!("{indent}<{name}"));
                     for attr in attributes {
                         match &attr.value {
@@ -74,7 +87,11 @@ impl Node {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Token {
-    StartTag { name: String, attributes: Vec<Attribute>, self_closing: bool },
+    StartTag {
+        name: String,
+        attributes: Vec<Attribute>,
+        self_closing: bool,
+    },
     EndTag(String),
     Text(String),
     Comment(String),
@@ -87,12 +104,22 @@ fn is_name_char(ch: char) -> bool {
 
 fn read_name(chars: &[char], mut index: usize) -> (String, usize) {
     let start = index;
-    while index < chars.len() && is_name_char(chars[index]) { index += 1; }
-    (chars[start..index].iter().collect::<String>().to_ascii_lowercase(), index)
+    while index < chars.len() && is_name_char(chars[index]) {
+        index += 1;
+    }
+    (
+        chars[start..index]
+            .iter()
+            .collect::<String>()
+            .to_ascii_lowercase(),
+        index,
+    )
 }
 
 fn skip_space(chars: &[char], mut index: usize) -> usize {
-    while index < chars.len() && chars[index].is_whitespace() { index += 1; }
+    while index < chars.len() && chars[index].is_whitespace() {
+        index += 1;
+    }
     index
 }
 
@@ -104,7 +131,9 @@ fn tokenize(source: &str) -> Vec<Token> {
     while i < chars.len() {
         if chars[i] != '<' {
             let start = i;
-            while i < chars.len() && chars[i] != '<' { i += 1; }
+            while i < chars.len() && chars[i] != '<' {
+                i += 1;
+            }
             tokens.push(Token::Text(chars[start..i].iter().collect()));
             continue;
         }
@@ -112,7 +141,9 @@ fn tokenize(source: &str) -> Vec<Token> {
         if chars[i..].starts_with(&['<', '!', '-', '-']) {
             i += 4;
             let start = i;
-            while i + 2 < chars.len() && !chars[i..].starts_with(&['-', '-', '>']) { i += 1; }
+            while i + 2 < chars.len() && !chars[i..].starts_with(&['-', '-', '>']) {
+                i += 1;
+            }
             let comment: String = chars[start..i].iter().collect();
             i = (i + 3).min(chars.len());
             tokens.push(Token::Comment(comment));
@@ -120,15 +151,24 @@ fn tokenize(source: &str) -> Vec<Token> {
         }
 
         if chars.len() - i >= 9
-            && chars[i..i + 9].iter().collect::<String>().eq_ignore_ascii_case("<!doctype")
+            && chars[i..i + 9]
+                .iter()
+                .collect::<String>()
+                .eq_ignore_ascii_case("<!doctype")
         {
             i += 9;
             i = skip_space(&chars, i);
             let (name, next) = read_name(&chars, i);
             i = next;
-            while i < chars.len() && chars[i] != '>' { i += 1; }
+            while i < chars.len() && chars[i] != '>' {
+                i += 1;
+            }
             i = (i + 1).min(chars.len());
-            tokens.push(Token::Doctype(if name.is_empty() { "html".into() } else { name }));
+            tokens.push(Token::Doctype(if name.is_empty() {
+                "html".into()
+            } else {
+                name
+            }));
             continue;
         }
 
@@ -136,9 +176,13 @@ fn tokenize(source: &str) -> Vec<Token> {
             i = skip_space(&chars, i + 2);
             let (name, next) = read_name(&chars, i);
             i = next;
-            while i < chars.len() && chars[i] != '>' { i += 1; }
+            while i < chars.len() && chars[i] != '>' {
+                i += 1;
+            }
             i = (i + 1).min(chars.len());
-            if !name.is_empty() { tokens.push(Token::EndTag(name)); }
+            if !name.is_empty() {
+                tokens.push(Token::EndTag(name));
+            }
             continue;
         }
 
@@ -150,8 +194,13 @@ fn tokenize(source: &str) -> Vec<Token> {
 
             loop {
                 i = skip_space(&chars, i);
-                if i >= chars.len() { break; }
-                if chars[i] == '>' { i += 1; break; }
+                if i >= chars.len() {
+                    break;
+                }
+                if chars[i] == '>' {
+                    i += 1;
+                    break;
+                }
                 if chars[i] == '/' && i + 1 < chars.len() && chars[i + 1] == '>' {
                     self_closing = true;
                     i += 2;
@@ -171,7 +220,10 @@ fn tokenize(source: &str) -> Vec<Token> {
                     continue;
                 }
 
-                let attr_name: String = chars[attr_start..i].iter().collect::<String>().to_ascii_lowercase();
+                let attr_name: String = chars[attr_start..i]
+                    .iter()
+                    .collect::<String>()
+                    .to_ascii_lowercase();
                 i = skip_space(&chars, i);
                 let value = if i < chars.len() && chars[i] == '=' {
                     i = skip_space(&chars, i + 1);
@@ -179,13 +231,19 @@ fn tokenize(source: &str) -> Vec<Token> {
                         let quote = chars[i];
                         i += 1;
                         let value_start = i;
-                        while i < chars.len() && chars[i] != quote { i += 1; }
+                        while i < chars.len() && chars[i] != quote {
+                            i += 1;
+                        }
                         let value: String = chars[value_start..i].iter().collect();
-                        if i < chars.len() { i += 1; }
+                        if i < chars.len() {
+                            i += 1;
+                        }
                         Some(value)
                     } else {
                         let value_start = i;
-                        while i < chars.len() && !chars[i].is_whitespace() && chars[i] != '>' { i += 1; }
+                        while i < chars.len() && !chars[i].is_whitespace() && chars[i] != '>' {
+                            i += 1;
+                        }
                         Some(chars[value_start..i].iter().collect())
                     }
                 } else {
@@ -193,12 +251,22 @@ fn tokenize(source: &str) -> Vec<Token> {
                 };
 
                 // Keep the first occurrence of a duplicate attribute name.
-                if !attributes.iter().any(|attr: &Attribute| attr.name == attr_name) {
-                    attributes.push(Attribute { name: attr_name, value });
+                if !attributes
+                    .iter()
+                    .any(|attr: &Attribute| attr.name == attr_name)
+                {
+                    attributes.push(Attribute {
+                        name: attr_name,
+                        value,
+                    });
                 }
             }
 
-            tokens.push(Token::StartTag { name, attributes, self_closing });
+            tokens.push(Token::StartTag {
+                name,
+                attributes,
+                self_closing,
+            });
             continue;
         }
 
@@ -211,8 +279,23 @@ fn tokenize(source: &str) -> Vec<Token> {
 }
 
 fn is_void(name: &str) -> bool {
-    matches!(name, "area" | "base" | "br" | "col" | "embed" | "hr" | "img"
-        | "input" | "link" | "meta" | "param" | "source" | "track" | "wbr")
+    matches!(
+        name,
+        "area"
+            | "base"
+            | "br"
+            | "col"
+            | "embed"
+            | "hr"
+            | "img"
+            | "input"
+            | "link"
+            | "meta"
+            | "param"
+            | "source"
+            | "track"
+            | "wbr"
+    )
 }
 
 fn node_at_path<'a>(root: &'a Node, path: &[usize]) -> &'a Node {
