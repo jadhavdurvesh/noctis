@@ -35,6 +35,11 @@ impl Node {
             .and_then(|attr| attr.value.as_deref())
     }
 
+    pub fn has_attribute(&self, name: &str) -> bool {
+        let Self::Element { attributes, .. } = self else { return false };
+        attributes.iter().any(|attr| attr.name.eq_ignore_ascii_case(name))
+    }
+
     /// Stable diagnostic tree output; not an HTML serializer.
     pub fn dump(&self) -> String {
         fn visit(node: &Node, depth: usize, out: &mut String) {
@@ -286,11 +291,10 @@ mod tests {
     #[test]
     fn parses_attributes_and_boolean_attributes() {
         let tree = parse("<a href='https://example.test' disabled>link</a>");
-        let html = &tree.children()[0];
-        let body = html.children()[0].children()[0].children()[0];
-        assert_eq!(body.attribute("href"), Some("https://example.test"));
-        assert_eq!(body.attribute("disabled"), None);
-        assert!(body.dump().contains("disabled"));
+        let link = &tree.children()[0];
+        assert_eq!(link.attribute("href"), Some("https://example.test"));
+        assert!(link.has_attribute("disabled"));
+        assert!(link.dump().contains("disabled"));
     }
 
     #[test]
