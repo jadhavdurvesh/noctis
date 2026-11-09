@@ -19,5 +19,3 @@ license-file = "LICENSE"
 rust-version = "1.75"
 repository = "https://github.com/jadhavdurvesh/noctis"
 
-[workspace.dependencies]
-thiserror = "1.0"
