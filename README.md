@@ -40,12 +40,19 @@ cargo test --workspace
 cargo run -p noctis-cli -- examples/hello.html
 ```
 
-The CLI parses a local HTML file and prints a debug DOM tree. The current HTML
-subset handles basic tags, attributes, comments, doctypes, a limited set of
-character references, raw-text/RCDATA elements, and common implied closures.
-It also exposes basic DOM traversal, mutation, text-content, and serialization
-helpers. This is not full HTML5 conformance. The CLI is not a graphical browser,
-does not fetch URLs, and does not execute JavaScript.
+The CLI parses a local HTML file and prints a debug DOM tree. The HTML subsystem
+now includes the complete 2,231-entry named character-reference table, numeric
+references, raw-text/RCDATA handling, basic document insertion modes, implied
+`html/head/body` construction, selected table foster parenting and inline
+formatting recovery, plus an arena-backed DOM with stable node IDs and
+parent/child/sibling queries and mutation.
+
+This remains a deliberately scoped implementation, not full HTML Living
+Standard conformance. Full tokenizer states, all tree-construction insertion
+modes, the complete adoption-agency algorithm, template/foreign-content
+handling, DOM events/namespaces, and broad differential conformance testing
+remain future work. The CLI is not a graphical browser, does not fetch URLs,
+and does not execute JavaScript.
 
 ## Platform strategy
 
