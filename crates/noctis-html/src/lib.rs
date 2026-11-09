@@ -400,7 +400,7 @@ fn decode_character_references_with_context(input: &str, in_attribute: bool) -> 
                 }
                 match parsed {
                     Ok(value) => output.push(numeric_character_reference(value)),
-                    Err(_) => output.push('\\u{fffd}'),
+                    Err(_) => output.push('\u{fffd}'),
                 }
                 index = cursor;
                 continue;
