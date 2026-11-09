@@ -375,7 +375,11 @@ fn numeric_character_reference(value: u32) -> char {
     } else {
         value
     };
-    char::from_u32(mapped).unwrap_or('\u{fffd}')
+    if mapped == 0 || (0xd800..=0xdfff).contains(&mapped) {
+        '\u{fffd}'
+    } else {
+        char::from_u32(mapped).unwrap_or('\u{fffd}')
+    }
 }
 
 /// Decode a practical subset of named and numeric HTML character references.
@@ -549,12 +553,15 @@ fn tokenize(source: &str) -> Vec<Token> {
             while index + 2 < chars.len() && !chars[index..].starts_with(&['-', '-', '>']) {
                 index += 1;
             }
-            let comment: String = chars[start..index].iter().collect();
-            if index + 2 < chars.len() {
+            let comment_end = if index + 2 < chars.len() {
+                let end = index;
                 index += 3;
+                end
             } else {
                 index = chars.len();
-            }
+                chars.len()
+            };
+            let comment: String = chars[start..comment_end].iter().collect();
             tokens.push(Token::Comment(comment));
             continue;
         }
@@ -670,7 +677,7 @@ fn tokenize(source: &str) -> Vec<Token> {
                 }
             }
 
-            if raw_text_element(&name) && !self_closing {
+            if (raw_text_element(&name) || rcdata_element(&name)) && !self_closing {
                 raw_tag = Some(name.clone());
             }
             tokens.push(Token::StartTag {
@@ -900,6 +907,23 @@ mod tests {
         let script = &tree.children()[0];
         assert_eq!(script.text_content(), "if (a < b) value = '<tag>';");
         assert_eq!(tree.elements_by_tag_name("p").len(), 1);
+    }
+
+    #[test]
+    fn handles_rcdata_in_title_and_textarea() {
+        let tree = parse("<title>A &amp; B <titleish></title><textarea>&lt;ok&gt;</textarea>");
+        let title = &tree.elements_by_tag_name("title")[0];
+        let textarea = &tree.elements_by_tag_name("textarea")[0];
+        assert_eq!(title.text_content(), "A & B <titleish>");
+        assert_eq!(textarea.text_content(), "<ok>");
+    }
+
+    #[test]
+    fn replaces_invalid_numeric_character_references() {
+        assert_eq!(decode_character_references("&#0;"), "�");
+        assert_eq!(decode_character_references("&#xD800;"), "�");
+        assert_eq!(decode_character_references("&#x110000;"), "�");
+        assert_eq!(decode_character_references("&unknown;"), "&unknown;");
     }
 
     #[test]
