@@ -1,0 +1,87 @@
+NOCTIS RESTRICTED SOURCE LICENSE (NRSL) — VERSION 1.0
+Copyright (c) 2026 Durvesh Mukund Jadhav. All rights reserved.
+
+NOTICE: This is a custom, source-available license. It is NOT an OSI-approved
+open-source license. Access to source code does not grant unrestricted rights.
+
+1. DEFINITIONS
+"Work" means the source code, object code, documentation, build files, designs,
+and other materials in this repository that are owned by the copyright holder.
+"Maintainer" means the copyright holder or a person authorized in writing.
+"You" means the person or entity exercising rights under this license.
+
+2. LIMITED GRANT
+Subject to this license, the Maintainer grants You a personal, non-exclusive,
+non-transferable, revocable, worldwide, royalty-free license to:
+(a) view and study the Work;
+(b) use and run the Work for personal, educational, academic, research, and
+    non-commercial evaluation purposes;
+(c) modify the Work for those purposes; and
+(d) make private copies for those purposes.
+
+3. NO PUBLIC REDISTRIBUTION OR COMMERCIAL USE
+Without the Maintainer's prior written permission, You must not:
+(a) sell, sublicense, rent, lease, or commercially exploit the Work;
+(b) publish, distribute, mirror, host, or otherwise make the Work or a
+    derivative publicly available;
+(c) include the Work in a commercial product, paid service, hosted service,
+    or commercial distribution;
+(d) grant rights in the Work beyond the limited rights in Section 2; or
+(e) remove or obscure copyright, license, or attribution notices.
+
+4. PRIVATE MODIFICATIONS
+You may maintain modified copies privately under Section 2. This license does
+not require publication of private modifications. Any private copy shared with
+a collaborator must retain this license, and the collaborator must agree to
+comply with it before receiving the copy.
+
+5. CONTRIBUTIONS
+Unless a separate written agreement states otherwise, a contribution
+intentionally submitted for inclusion in this project is licensed to the
+project under this NRSL version 1.0. The contributor retains ownership of
+their contribution and confirms they have the right to submit it. The
+Maintainer receives the rights needed to use, modify, and distribute the
+contribution as part of the Work, subject to this license.
+
+6. THIRD-PARTY MATERIAL
+This license covers only material owned by the Maintainer. Third-party
+components remain under their own licenses. Their copyright and license
+notices must be preserved, and their terms govern those components. No
+third-party license grants extra rights in Maintainer-owned material.
+
+7. TRADEMARKS
+No trademark, service-mark, logo, or branding rights are granted. You may
+truthfully identify the project when discussing it, but may not imply
+endorsement, affiliation, or that a modified version is an official release.
+
+8. TERMINATION
+The rights granted here terminate automatically if You materially breach this
+license. Upon termination, You must stop exercising the granted rights and
+delete copies in Your possession, except to the extent retention is required
+by law. The Maintainer may reinstate rights in a signed written notice.
+
+9. NO WARRANTY; LIMITATION OF LIABILITY
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, TITLE, AND NON-INFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED BY
+APPLICABLE LAW, THE MAINTAINER SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES,
+OR OTHER LIABILITY ARISING FROM THE WORK OR ITS USE.
+
+10. RIGHTS RESERVED
+All rights not expressly granted are reserved. No permission for public
+redistribution, commercial use, patent use, or relicensing is granted by
+implication, estoppel, or otherwise.
+
+11. WRITTEN PERMISSION
+Requests for commercial licensing, public redistribution, or other expanded
+rights must be made to the Maintainer through the contact route listed in the
+project repository. Permission is effective only when granted in writing.
+
+12. GENERAL
+If a provision is held unenforceable, it will be limited to the minimum extent
+necessary and the remaining provisions will continue to apply. This license
+does not limit rights that cannot lawfully be restricted in Your jurisdiction.
+
+This license is a project-specific starting point, not legal advice. Have a
+qualified lawyer review it before accepting outside contributions or relying
+on it for commercial licensing.
