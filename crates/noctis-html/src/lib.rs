@@ -357,6 +357,14 @@ fn named_entity_value(name: &str) -> Option<&'static str> {
         .map(|position| index[position].1)
 }
 
+fn append_named_entity(output: &mut String, codepoints: &str) {
+    for codepoint in codepoints.split(',') {
+        if let Ok(value) = u32::from_str_radix(codepoint, 16) {
+            output.push(char::from_u32(value).unwrap_or('\u{fffd}'));
+        }
+    }
+}
+
 fn decode_character_references_with_context(input: &str, in_attribute: bool) -> String {
     let chars: Vec<char> = input.chars().collect();
     let mut output = String::with_capacity(input.len());
@@ -433,7 +441,7 @@ fn decode_character_references_with_context(input: &str, in_attribute: bool) -> 
             }
 
             if let Some((value, end)) = matched {
-                output.push_str(value);
+                append_named_entity(&mut output, value);
                 index = end;
                 continue;
             }
