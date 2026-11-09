@@ -539,8 +539,12 @@ mod tests {
         let new_child = document.create_element("new").unwrap();
         let reference = document.create_element("reference").unwrap();
 
-        document.append_child(document.document_node(), left).unwrap();
-        document.append_child(document.document_node(), right).unwrap();
+        document
+            .append_child(document.document_node(), left)
+            .unwrap();
+        document
+            .append_child(document.document_node(), right)
+            .unwrap();
         document.append_child(right, reference).unwrap();
 
         assert_eq!(
