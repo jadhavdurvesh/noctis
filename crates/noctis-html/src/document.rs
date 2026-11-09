@@ -297,11 +297,7 @@ impl DomDocument {
         Ok(())
     }
 
-    pub fn append_child(
-        &mut self,
-        parent: DomNodeId,
-        child: DomNodeId,
-    ) -> Result<(), DomError> {
+    pub fn append_child(&mut self, parent: DomNodeId, child: DomNodeId) -> Result<(), DomError> {
         self.ensure_container(parent)?;
         self.node(child)?;
         self.ensure_no_cycle(parent, child)?;
@@ -384,7 +380,10 @@ impl DomDocument {
             return Err(DomError::ParentCannotHaveChildren(element));
         };
         let name = name.to_ascii_lowercase();
-        if let Some(attribute) = attributes.iter_mut().find(|attribute| attribute.name == name) {
+        if let Some(attribute) = attributes
+            .iter_mut()
+            .find(|attribute| attribute.name == name)
+        {
             attribute.value = value.map(str::to_owned);
         } else {
             attributes.push(Attribute {
@@ -395,11 +394,7 @@ impl DomDocument {
         Ok(())
     }
 
-    pub fn get_attribute(
-        &self,
-        element: DomNodeId,
-        name: &str,
-    ) -> Result<Option<&str>, DomError> {
+    pub fn get_attribute(&self, element: DomNodeId, name: &str) -> Result<Option<&str>, DomError> {
         Ok(self.kind(element)?.attribute(name))
     }
 
@@ -496,7 +491,7 @@ impl DomDocument {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parse_fragment, parse_document};
+    use crate::{parse_document, parse_fragment};
 
     #[test]
     fn stable_ids_survive_sibling_mutations() {
@@ -522,7 +517,9 @@ mod tests {
         let mut document = DomDocument::new();
         let parent = document.create_element("parent").unwrap();
         let child = document.create_element("child").unwrap();
-        document.append_child(document.document_node(), parent).unwrap();
+        document
+            .append_child(document.document_node(), parent)
+            .unwrap();
         document.append_child(parent, child).unwrap();
 
         assert_eq!(
@@ -541,7 +538,10 @@ mod tests {
         let target = document.find_by_id("target").unwrap();
         assert_eq!(document.text_content(target).unwrap(), "hello");
         assert_eq!(document.elements_by_tag_name("p"), vec![target]);
-        assert_eq!(document.get_attribute(target, "id").unwrap(), Some("target"));
+        assert_eq!(
+            document.get_attribute(target, "id").unwrap(),
+            Some("target")
+        );
     }
 
     #[test]
@@ -559,7 +559,10 @@ mod tests {
 
     #[test]
     fn entity_table_handles_legacy_names_and_multi_codepoint_values() {
-        assert_eq!(crate::decode_character_references("&copy © &NotEqualTilde;"), "© © ≂̸");
+        assert_eq!(
+            crate::decode_character_references("&copy © &NotEqualTilde;"),
+            "© © ≂̸"
+        );
         assert_eq!(crate::decode_character_references("&NotEqualTilde;"), "≂̸");
         assert_eq!(
             crate::decode_character_references_in_attribute("&notit;"),
