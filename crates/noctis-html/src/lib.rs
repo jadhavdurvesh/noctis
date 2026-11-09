@@ -1030,7 +1030,12 @@ pub fn parse_document(source: &str) -> Node {
                 children,
             } if name == "head" => {
                 merge_attributes(&mut head_attributes, attributes);
-                if matches!(mode, DocumentInsertionMode::BeforeHtml | DocumentInsertionMode::BeforeHead | DocumentInsertionMode::InHead) {
+                if matches!(
+                    mode,
+                    DocumentInsertionMode::BeforeHtml
+                        | DocumentInsertionMode::BeforeHead
+                        | DocumentInsertionMode::InHead
+                ) {
                     append_nodes(&mut head, children);
                     mode = DocumentInsertionMode::AfterHead;
                 } else {
@@ -1057,7 +1062,10 @@ pub fn parse_document(source: &str) -> Node {
                 match mode {
                     DocumentInsertionMode::BeforeHtml => unreachable!(),
                     DocumentInsertionMode::BeforeHead => {
-                        if is_head_content(&other) || is_whitespace_text(&other) || matches!(other, Node::Comment(_)) {
+                        if is_head_content(&other)
+                            || is_whitespace_text(&other)
+                            || matches!(other, Node::Comment(_))
+                        {
                             head.append_child(other).expect("head is a container");
                             mode = DocumentInsertionMode::InHead;
                         } else {
@@ -1111,7 +1119,10 @@ pub fn parse_document(source: &str) -> Node {
 
 fn merge_attributes(target: &mut Vec<Attribute>, incoming: Vec<Attribute>) {
     for attribute in incoming {
-        if !target.iter().any(|existing| existing.name == attribute.name) {
+        if !target
+            .iter()
+            .any(|existing| existing.name == attribute.name)
+        {
             target.push(attribute);
         }
     }
@@ -1119,7 +1130,9 @@ fn merge_attributes(target: &mut Vec<Attribute>, incoming: Vec<Attribute>) {
 
 fn append_nodes(parent: &mut Node, children: Vec<Node>) {
     for child in children {
-        parent.append_child(child).expect("document containers accept children");
+        parent
+            .append_child(child)
+            .expect("document containers accept children");
     }
 }
 
@@ -1130,7 +1143,19 @@ fn is_whitespace_text(node: &Node) -> bool {
 fn is_head_content(node: &Node) -> bool {
     matches!(
         node.name(),
-        Some("base" | "basefont" | "bgsound" | "link" | "meta" | "title" | "noscript" | "noframes" | "style" | "script" | "template")
+        Some(
+            "base"
+                | "basefont"
+                | "bgsound"
+                | "link"
+                | "meta"
+                | "title"
+                | "noscript"
+                | "noframes"
+                | "style"
+                | "script"
+                | "template"
+        )
     )
 }
 
@@ -1138,11 +1163,19 @@ fn find_doctype(source: &str) -> Option<String> {
     let lower = source.to_ascii_lowercase();
     let start = lower.find("<!doctype")? + "<!doctype".len();
     let tail = &source[start..];
-    let name_start = tail.find(|ch: char| !ch.is_whitespace()).unwrap_or(tail.len());
+    let name_start = tail
+        .find(|ch: char| !ch.is_whitespace())
+        .unwrap_or(tail.len());
     let tail = &tail[name_start..];
-    let name_end = tail.find(|ch: char| !is_name_char(ch)).unwrap_or(tail.len());
+    let name_end = tail
+        .find(|ch: char| !is_name_char(ch))
+        .unwrap_or(tail.len());
     let name = tail[..name_end].trim();
-    Some(if name.is_empty() { "html".into() } else { name.to_ascii_lowercase() })
+    Some(if name.is_empty() {
+        "html".into()
+    } else {
+        name.to_ascii_lowercase()
+    })
 }
 
 /// Backwards-compatible alias for fragment parsing.
@@ -1215,7 +1248,8 @@ mod tests {
 
     #[test]
     fn handles_rcdata_in_title_and_textarea() {
-        let tree = parse_fragment("<title>A &amp; B <titleish></title><textarea>&lt;ok&gt;</textarea>");
+        let tree =
+            parse_fragment("<title>A &amp; B <titleish></title><textarea>&lt;ok&gt;</textarea>");
         let title = &tree.elements_by_tag_name("title")[0];
         let textarea = &tree.elements_by_tag_name("textarea")[0];
         assert_eq!(title.text_content(), "A & B <titleish>");
