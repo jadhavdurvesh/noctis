@@ -1074,7 +1074,10 @@ pub fn parse_document(source: &str) -> Node {
                         }
                     }
                     DocumentInsertionMode::InHead => {
-                        if is_head_content(&other) || is_whitespace_text(&other) || matches!(other, Node::Comment(_)) {
+                        if is_head_content(&other)
+                            || is_whitespace_text(&other)
+                            || matches!(other, Node::Comment(_))
+                        {
                             head.append_child(other).expect("head is a container");
                         } else {
                             // Leaving the head implicitly creates the body.
