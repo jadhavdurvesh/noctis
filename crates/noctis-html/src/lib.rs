@@ -71,7 +71,9 @@ impl Node {
                         }
                     }
                     out.push_str(">\n");
-                    for child in children { visit(child, depth + 1, out); }
+                    for child in children {
+                        visit(child, depth + 1, out);
+                    }
                 }
                 Node::Text(text) => out.push_str(&format!("{indent}#text {text:?}\n")),
                 Node::Comment(text) => out.push_str(&format!("{indent}#comment {text:?}\n")),
