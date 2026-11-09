@@ -415,7 +415,7 @@ fn decode_character_references_with_context(input: &str, in_attribute: bool) -> 
             }
         } else {
             while cursor < chars.len()
-                && cursor - start <= 32
+                && cursor - start <= 33
                 && (chars[cursor].is_ascii_alphanumeric() || chars[cursor] == ';')
             {
                 cursor += 1;
@@ -481,79 +481,6 @@ fn numeric_character_reference(value: u32) -> char {
     } else {
         char::from_u32(mapped).unwrap_or('\u{fffd}')
     }
-}
-
-/// Decode a practical subset of named and numeric HTML character references.
-/// Named references in this initial implementation require a trailing semicolon.
-pub fn decode_character_references(input: &str) -> String {
-    let chars: Vec<char> = input.chars().collect();
-    let mut output = String::with_capacity(input.len());
-    let mut index = 0;
-
-    while index < chars.len() {
-        if chars[index] != '&' {
-            output.push(chars[index]);
-            index += 1;
-            continue;
-        }
-
-        let start = index;
-        let mut cursor = index + 1;
-        if cursor < chars.len() && chars[cursor] == '#' {
-            cursor += 1;
-            let is_hex = cursor < chars.len() && matches!(chars[cursor], 'x' | 'X');
-            if is_hex {
-                cursor += 1;
-            }
-            let digits_start = cursor;
-            while cursor < chars.len()
-                && if is_hex {
-                    chars[cursor].is_ascii_hexdigit()
-                } else {
-                    chars[cursor].is_ascii_digit()
-                }
-            {
-                cursor += 1;
-            }
-            if cursor > digits_start {
-                let digits: String = chars[digits_start..cursor].iter().collect();
-                let parsed = if is_hex {
-                    u32::from_str_radix(&digits, 16)
-                } else {
-                    digits.parse::<u32>()
-                };
-                if cursor < chars.len() && chars[cursor] == ';' {
-                    cursor += 1;
-                }
-                match parsed {
-                    Ok(value) => output.push(numeric_character_reference(value)),
-                    Err(_) => output.push('\u{fffd}'),
-                }
-                index = cursor;
-                continue;
-            }
-        } else {
-            while cursor < chars.len()
-                && cursor - start <= 32
-                && chars[cursor].is_ascii_alphanumeric()
-            {
-                cursor += 1;
-            }
-            if cursor > start + 1 && cursor < chars.len() && chars[cursor] == ';' {
-                let name: String = chars[start + 1..cursor].iter().collect();
-                if let Some(decoded) = named_character_reference(&name) {
-                    output.push(decoded);
-                    index = cursor + 1;
-                    continue;
-                }
-            }
-        }
-
-        output.push('&');
-        index += 1;
-    }
-
-    output
 }
 
 fn is_void_element(name: &str) -> bool {
