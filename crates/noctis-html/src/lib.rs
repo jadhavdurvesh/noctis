@@ -1213,8 +1213,12 @@ pub fn parse_document(source: &str) -> Node {
                         }
                     }
                     DocumentInsertionMode::AfterHead => {
-                        body.append_child(other).expect("body is a container");
-                        mode = DocumentInsertionMode::InBody;
+                        if is_head_content(&other) {
+                            head.append_child(other).expect("head is a container");
+                        } else {
+                            body.append_child(other).expect("body is a container");
+                            mode = DocumentInsertionMode::InBody;
+                        }
                     }
                     DocumentInsertionMode::InBody => {
                         body.append_child(other).expect("body is a container");
