@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/noctis-core",
+  "crates/noctis-html",
+  "crates/noctis-css",
+  "crates/noctis-layout",
+  "crates/noctis-paint",
+  "crates/noctis-net",
+  "crates/noctis-js",
+  "crates/noctis-platform",
+  "apps/noctis-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license-file = "LICENSE"
+rust-version = "1.75"
+repository = "https://github.com/jadhavdurvesh/noctis"
+
+[workspace.dependencies]
+thiserror = "1.0"
