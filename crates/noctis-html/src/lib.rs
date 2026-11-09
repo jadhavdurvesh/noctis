@@ -870,6 +870,13 @@ fn is_table_section(name: &str) -> bool {
     matches!(name, "tbody" | "thead" | "tfoot")
 }
 
+fn is_table_insertion_context(stack: &[OpenElement]) -> bool {
+    matches!(
+        stack.last().map(|element| element.name.as_str()),
+        Some("table" | "tbody" | "thead" | "tfoot" | "tr")
+    )
+}
+
 fn is_table_structure_tag(name: &str) -> bool {
     matches!(
         name,
@@ -936,7 +943,7 @@ pub fn parse_fragment(source: &str) -> Node {
     for token in tokenize(source) {
         match token {
             Token::Text(text) => {
-                let in_table = open_elements.iter().any(|element| element.name == "table");
+                let in_table = is_table_insertion_context(&open_elements);
                 if in_table && !text.chars().all(char::is_whitespace) {
                     if insert_foster_node(&mut root, &mut open_elements, Node::Text(text)).is_some()
                     {
@@ -967,7 +974,7 @@ pub fn parse_fragment(source: &str) -> Node {
             } => {
                 apply_implied_end_tags(&mut open_elements, &name);
 
-                if open_elements.iter().any(|element| element.name == "table") {
+                if is_table_insertion_context(&open_elements) {
                     let top = open_elements.last().map(|element| element.name.as_str());
                     if name == "tr" && top == Some("table") {
                         append_open_element(
@@ -1447,8 +1454,37 @@ mod tests {
     }
 
     #[test]
+    fn foster_parents_stray_table_content_and_inserts_tbody() {
+        let tree = parse_fragment("<table>stray<tr><td>cell</td></tr></table>");
+        assert_eq!(tree.children().len(), 2);
+        assert_eq!(tree.children()[0], Node::Text("stray".into()));
+
+        let table = &tree.children()[1];
+        assert_eq!(table.name(), Some("table"));
+        assert_eq!(table.elements_by_tag_name("tbody").len(), 1);
+        assert_eq!(table.elements_by_tag_name("tr").len(), 1);
+        assert_eq!(table.elements_by_tag_name("td")[0].text_content(), "cell");
+    }
+
+    #[test]
+    fn keeps_normal_content_inside_table_cells() {
+        let tree = parse_fragment("<table><tr><td>before<div>inside</div>after</td></tr></table>");
+        let cell = &tree.elements_by_tag_name("td")[0];
+        assert_eq!(cell.text_content(), "beforeinsideafter");
+        assert_eq!(cell.elements_by_tag_name("div").len(), 1);
+        assert_eq!(tree.children().len(), 1);
+    }
+
+    #[test]
+    fn repairs_misnested_inline_formatting_elements() {
+        let tree = parse_fragment("<b><i>one</b>two</i>");
+        assert_eq!(tree.children().len(), 2);
+        assert_eq!(tree.to_html(), "<b><i>one</i></b><i>two</i>");
+    }
+
+    #[test]
     fn closes_to_the_matching_open_element() {
-        let tree = parse("<a><b><c>x</b>y</a>");
+        let tree = parse_fragment("<a><b><c>x</b>y</a>");
         let dump = tree.dump();
         assert!(dump.contains("<b>"));
         assert!(dump.contains("#text \"y\""));
