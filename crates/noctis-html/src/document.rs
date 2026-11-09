@@ -532,6 +532,29 @@ mod tests {
     }
 
     #[test]
+    fn insert_before_rejects_a_reference_from_another_parent() {
+        let mut document = DomDocument::new();
+        let left = document.create_element("left").unwrap();
+        let right = document.create_element("right").unwrap();
+        let new_child = document.create_element("new").unwrap();
+        let reference = document.create_element("reference").unwrap();
+
+        document.append_child(document.document_node(), left).unwrap();
+        document.append_child(document.document_node(), right).unwrap();
+        document.append_child(right, reference).unwrap();
+
+        assert_eq!(
+            document.insert_before(left, new_child, Some(reference)),
+            Err(DomError::ReferenceIsNotChild {
+                parent: left,
+                reference,
+            })
+        );
+        assert_eq!(document.parent_node(reference).unwrap(), Some(right));
+        assert_eq!(document.parent_node(new_child).unwrap(), None);
+    }
+
+    #[test]
     fn supports_attribute_and_subtree_queries() {
         let tree = parse_fragment("<main><p id='target'>hello</p></main>");
         let document = DomDocument::from_tree(&tree).unwrap();
