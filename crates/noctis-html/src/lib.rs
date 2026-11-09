@@ -5,6 +5,9 @@
 //! Standard implementation and must not be treated as safe for arbitrary web
 //! content until the parser and browser security model mature.
 
+pub mod document;
+pub use document::{DomDocument, DomError, DomNode, DomNodeId, DomNodeKind};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attribute {
     pub name: String,
@@ -338,20 +341,20 @@ fn starts_with_ascii_case_insensitive(chars: &[char], index: usize, pattern: &st
 
 const NAMED_ENTITY_DATA: &str = include_str!("named_entities.tsv");
 
-fn named_entity_value(name: &str) -> Option<String> {
-    let rows: Vec<&str> = NAMED_ENTITY_DATA.lines().collect();
-    let index = rows
-        .binary_search_by(|row| {
-            row.split_once('\t')
-                .map_or("", |(entity_name, _)| entity_name)
-                .cmp(name)
-        })
-        .ok()?;
-    let (_, codepoints) = rows[index].split_once('\t')?;
-    codepoints
-        .split(',')
-        .map(|value| u32::from_str_radix(value, 16).ok().and_then(char::from_u32))
-        .collect()
+fn named_entity_value(name: &str) -> Option<&'static str> {
+    use std::sync::OnceLock;
+
+    static INDEX: OnceLock<Vec<(&'static str, &'static str)>> = OnceLock::new();
+    let index = INDEX.get_or_init(|| {
+        NAMED_ENTITY_DATA
+            .lines()
+            .filter_map(|line| line.split_once('\t'))
+            .collect()
+    });
+    index
+        .binary_search_by(|(entity_name, _)| entity_name.cmp(&name))
+        .ok()
+        .map(|position| index[position].1)
 }
 
 fn decode_character_references_with_context(input: &str, in_attribute: bool) -> String {
@@ -430,7 +433,7 @@ fn decode_character_references_with_context(input: &str, in_attribute: bool) -> 
             }
 
             if let Some((value, end)) = matched {
-                output.push_str(&value);
+                output.push_str(value);
                 index = end;
                 continue;
             }
@@ -857,7 +860,7 @@ fn apply_implied_end_tags(stack: &mut Vec<OpenElement>, incoming: &str) {
 ///
 /// This supports a useful subset of HTML syntax and error recovery. It does not
 /// implement the full HTML Living Standard tree-construction algorithm.
-pub fn parse(source: &str) -> Node {
+pub fn parse_fragment(source: &str) -> Node {
     let mut root = Node::Document(Vec::new());
     let mut open_elements: Vec<OpenElement> = Vec::new();
 
@@ -942,13 +945,152 @@ pub fn parse(source: &str) -> Node {
     root
 }
 
+/// Parse a complete HTML document into an `html/head/body` document skeleton.
+///
+/// This implements common document setup and head/body routing for the currently
+/// supported subset. It is not the full HTML Living Standard insertion-mode algorithm.
+pub fn parse_document(source: &str) -> Node {
+    let fragment = parse_fragment(source);
+    let Node::Document(fragment_children) = fragment else {
+        unreachable!("fragment parser always returns a document node");
+    };
+
+    let mut html = Node::Element {
+        name: "html".into(),
+        attributes: Vec::new(),
+        children: Vec::new(),
+    };
+    let mut head = Node::Element {
+        name: "head".into(),
+        attributes: Vec::new(),
+        children: Vec::new(),
+    };
+    let mut body = Node::Element {
+        name: "body".into(),
+        attributes: Vec::new(),
+        children: Vec::new(),
+    };
+
+    let mut explicit_html_attrs = Vec::new();
+    let mut explicit_head_attrs = Vec::new();
+    let mut explicit_body_attrs = Vec::new();
+    let mut saw_head = false;
+    let mut saw_body = false;
+    let mut in_head = true;
+
+    for child in fragment_children {
+        match child {
+            Node::Doctype(_) => {
+                // The document doctype is preserved as the first document child.
+                // Store it separately below to keep exactly one doctype in output.
+            }
+            Node::Element { name, attributes, children } if name == "html" => {
+                explicit_html_attrs.extend(attributes);
+                for nested in children {
+                    match nested {
+                        Node::Element { name, attributes, children } if name == "head" => {
+                            explicit_head_attrs.extend(attributes);
+                            saw_head = true;
+                            for item in children {
+                                head.append_child(item).expect("head is a container");
+                            }
+                        }
+                        Node::Element { name, attributes, children } if name == "body" => {
+                            explicit_body_attrs.extend(attributes);
+                            saw_body = true;
+                            for item in children {
+                                body.append_child(item).expect("body is a container");
+                            }
+                        }
+                        other => {
+                            if in_head && is_head_content(&other) {
+                                head.append_child(other).expect("head is a container");
+                            } else {
+                                in_head = false;
+                                body.append_child(other).expect("body is a container");
+                            }
+                        }
+                    }
+                }
+            }
+            Node::Element { name, attributes, children } if name == "head" && !saw_head => {
+                explicit_head_attrs.extend(attributes);
+                saw_head = true;
+                for item in children {
+                    head.append_child(item).expect("head is a container");
+                }
+            }
+            Node::Element { name, attributes, children } if name == "body" && !saw_body => {
+                in_head = false;
+                explicit_body_attrs.extend(attributes);
+                saw_body = true;
+                for item in children {
+                    body.append_child(item).expect("body is a container");
+                }
+            }
+            other => {
+                if in_head && is_head_content(&other) {
+                    head.append_child(other).expect("head is a container");
+                } else {
+                    in_head = false;
+                    body.append_child(other).expect("body is a container");
+                }
+            }
+        }
+    }
+
+    if let Node::Element { attributes, .. } = &mut html {
+        *attributes = explicit_html_attrs;
+    }
+    if let Node::Element { attributes, .. } = &mut head {
+        *attributes = explicit_head_attrs;
+    }
+    if let Node::Element { attributes, .. } = &mut body {
+        *attributes = explicit_body_attrs;
+    }
+
+    let mut output = Vec::new();
+    if let Some(doctype) = find_doctype(source) {
+        output.push(Node::Doctype(doctype));
+    }
+    if let Node::Element { children, .. } = &mut html {
+        children.push(head);
+        children.push(body);
+    }
+    output.push(html);
+    Node::Document(output)
+}
+
+fn is_head_content(node: &Node) -> bool {
+    matches!(
+        node.name(),
+        Some("base" | "basefont" | "bgsound" | "link" | "meta" | "title" | "noscript" | "noframes" | "style" | "script" | "template")
+    )
+}
+
+fn find_doctype(source: &str) -> Option<String> {
+    let lower = source.to_ascii_lowercase();
+    let start = lower.find("<!doctype")? + "<!doctype".len();
+    let tail = &source[start..];
+    let name_start = tail.find(|ch: char| !ch.is_whitespace()).unwrap_or(tail.len());
+    let tail = &tail[name_start..];
+    let name_end = tail.find(|ch: char| !is_name_char(ch)).unwrap_or(tail.len());
+    let name = tail[..name_end].trim();
+    Some(if name.is_empty() { "html".into() } else { name.to_ascii_lowercase() })
+}
+
+/// Backwards-compatible alias for fragment parsing.
+pub fn parse(source: &str) -> Node {
+    parse_fragment(source)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn builds_nested_elements_and_text() {
-        let tree = parse("<html><body><h1>Hello</h1><p>World</p></body></html>");
+        let tree = parse_fragment("<html><body><h1>Hello</h1><p>World</p></body></html>");
         let dump = tree.dump();
         assert!(dump.contains("<html>"));
         assert!(dump.contains("<h1>"));
@@ -972,7 +1114,7 @@ mod tests {
         assert_eq!(image.attribute("src"), Some("https://example.test/a.png"));
         assert_eq!(image.attribute("alt"), Some("sample/"));
         assert!(image.has_attribute("src"));
-        let duplicate = parse("<a href='first' href='second'>x</a>");
+        let duplicate = parse_fragment("<a href='first' href='second'>x</a>");
         assert_eq!(duplicate.children()[0].attribute("href"), Some("first"));
     }
 
@@ -1007,7 +1149,7 @@ mod tests {
 
     #[test]
     fn handles_rcdata_in_title_and_textarea() {
-        let tree = parse("<title>A &amp; B <titleish></title><textarea>&lt;ok&gt;</textarea>");
+        let tree = parse_fragment("<title>A &amp; B <titleish></title><textarea>&lt;ok&gt;</textarea>");
         let title = &tree.elements_by_tag_name("title")[0];
         let textarea = &tree.elements_by_tag_name("textarea")[0];
         assert_eq!(title.text_content(), "A & B <titleish>");
@@ -1025,13 +1167,13 @@ mod tests {
 
     #[test]
     fn applies_common_implied_end_tags() {
-        let list = parse("<ul><li>one<li>two</ul>");
+        let list = parse_fragment("<ul><li>one<li>two</ul>");
         let items = list.elements_by_tag_name("li");
         assert_eq!(items.len(), 2);
         assert_eq!(items[0].text_content(), "one");
         assert_eq!(items[1].text_content(), "two");
 
-        let paragraphs = parse("<p>one<div>two</div>");
+        let paragraphs = parse_fragment("<p>one<div>two</div>");
         assert_eq!(paragraphs.elements_by_tag_name("p").len(), 1);
         assert_eq!(paragraphs.elements_by_tag_name("div").len(), 1);
     }
@@ -1066,7 +1208,7 @@ mod tests {
         assert!(tree.dump().contains("#comment \"note\""));
         assert_eq!(tree.children().last().unwrap().text_content(), "नमस्ते");
 
-        let unterminated = parse("<!-- unfinished");
+        let unterminated = parse_fragment("<!-- unfinished");
         assert_eq!(unterminated.children().len(), 1);
         assert_eq!(
             unterminated.children()[0],
