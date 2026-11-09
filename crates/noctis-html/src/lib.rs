@@ -758,12 +758,26 @@ fn children_at_path_mut<'a>(root: &'a mut Node, path: &[usize]) -> &'a mut Vec<N
 fn is_formatting_element(name: &str) -> bool {
     matches!(
         name,
-        "a" | "b" | "big" | "code" | "em" | "font" | "i" | "s" | "small" | "strike"
-            | "strong" | "tt" | "u"
+        "a" | "b"
+            | "big"
+            | "code"
+            | "em"
+            | "font"
+            | "i"
+            | "s"
+            | "small"
+            | "strike"
+            | "strong"
+            | "tt"
+            | "u"
     )
 }
 
-fn insert_foster_node(root: &mut Node, stack: &mut [OpenElement], node: Node) -> Option<Vec<usize>> {
+fn insert_foster_node(
+    root: &mut Node,
+    stack: &mut [OpenElement],
+    node: Node,
+) -> Option<Vec<usize>> {
     let table = stack.iter().rposition(|element| element.name == "table")?;
     let table_path = stack[table].path.clone();
     let table_index = *table_path.last()?;
@@ -824,7 +838,9 @@ fn close_misnested_formatting_element(
         .skip(position + 1)
         .filter(|element| is_formatting_element(&element.name))
         .filter_map(|element| match node_at_path(root, &element.path) {
-            Node::Element { name, attributes, .. } => Some((name.clone(), attributes.clone())),
+            Node::Element {
+                name, attributes, ..
+            } => Some((name.clone(), attributes.clone())),
             _ => None,
         })
         .collect();
@@ -857,8 +873,18 @@ fn is_table_section(name: &str) -> bool {
 fn is_table_structure_tag(name: &str) -> bool {
     matches!(
         name,
-        "caption" | "col" | "colgroup" | "tbody" | "td" | "tfoot" | "th" | "thead" | "tr"
-            | "style" | "script" | "template"
+        "caption"
+            | "col"
+            | "colgroup"
+            | "tbody"
+            | "td"
+            | "tfoot"
+            | "th"
+            | "thead"
+            | "tr"
+            | "style"
+            | "script"
+            | "template"
     )
 }
 
@@ -912,7 +938,8 @@ pub fn parse_fragment(source: &str) -> Node {
             Token::Text(text) => {
                 let in_table = open_elements.iter().any(|element| element.name == "table");
                 if in_table && !text.chars().all(char::is_whitespace) {
-                    if insert_foster_node(&mut root, &mut open_elements, Node::Text(text)).is_some() {
+                    if insert_foster_node(&mut root, &mut open_elements, Node::Text(text)).is_some()
+                    {
                         continue;
                     }
                 }
@@ -1021,8 +1048,14 @@ pub fn parse_fragment(source: &str) -> Node {
                         name: "p".into(),
                     });
                 }
-                if matches!(name.as_str(), "table" | "tbody" | "thead" | "tfoot" | "tr" | "td" | "th") {
-                    if let Some(position) = open_elements.iter().rposition(|element| element.name == name) {
+                if matches!(
+                    name.as_str(),
+                    "table" | "tbody" | "thead" | "tfoot" | "tr" | "td" | "th"
+                ) {
+                    if let Some(position) = open_elements
+                        .iter()
+                        .rposition(|element| element.name == name)
+                    {
                         open_elements.truncate(position);
                     }
                 } else {
