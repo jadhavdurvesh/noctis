@@ -396,7 +396,11 @@ mod tests {
         let dump = tree.dump();
         assert!(dump.contains("<!doctype html>"));
         assert!(dump.contains("#comment \"note\""));
-        assert!(dump.contains("नमस्ते"));
+        let paragraph = tree.children().last().expect("paragraph node");
+        assert_eq!(
+            paragraph.children(),
+            &[Node::Text("नमस्ते".to_string())]
+        );
     }
 
     #[test]
