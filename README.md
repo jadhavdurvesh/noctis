@@ -22,7 +22,7 @@ does not embed those browser engines.
 | Crate | Responsibility | Initial status |
 |---|---|---|
 | `noctis-core` | Shared engine primitives | Foundation |
-| `noctis-html` | Tokenizer, parser, DOM | First implementation |
+| `noctis-html` | Tokenizer, parser, DOM | Experimental subset with tests |
 | `noctis-css` | CSS syntax and style system | Skeleton |
 | `noctis-layout` | Layout tree and geometry | Skeleton |
 | `noctis-paint` | Display list and painting | Skeleton |
@@ -40,8 +40,12 @@ cargo test --workspace
 cargo run -p noctis-cli -- examples/hello.html
 ```
 
-The CLI parses a local HTML file and prints a debug DOM tree. It is not a
-graphical browser, does not fetch URLs, and does not execute JavaScript.
+The CLI parses a local HTML file and prints a debug DOM tree. The current HTML
+subset handles basic tags, attributes, comments, doctypes, a limited set of
+character references, raw-text/RCDATA elements, and common implied closures.
+It also exposes basic DOM traversal, mutation, text-content, and serialization
+helpers. This is not full HTML5 conformance. The CLI is not a graphical browser,
+does not fetch URLs, and does not execute JavaScript.
 
 ## Platform strategy
 
