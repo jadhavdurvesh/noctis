@@ -131,7 +131,10 @@ impl Node {
     /// Collect matching elements in tree order, including this node if it matches.
     pub fn elements_by_tag_name<'a>(&'a self, tag_name: &str) -> Vec<&'a Node> {
         fn collect<'a>(node: &'a Node, name: &str, matches: &mut Vec<&'a Node>) {
-            if node.name().is_some_and(|node_name| node_name.eq_ignore_ascii_case(name)) {
+            if node
+                .name()
+                .is_some_and(|node_name| node_name.eq_ignore_ascii_case(name))
+            {
                 matches.push(node);
             }
             for child in node.children() {
@@ -365,9 +368,9 @@ fn named_character_reference(name: &str) -> Option<char> {
 
 fn numeric_character_reference(value: u32) -> char {
     const WINDOWS_1252: [u32; 32] = [
-        0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160,
-        0x2039, 0x152, 0x8d, 0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013,
-        0x2014, 0x2dc, 0x2122, 0x161, 0x203a, 0x153, 0x9d, 0x17e, 0x178,
+        0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039,
+        0x152, 0x8d, 0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
+        0x2dc, 0x2122, 0x161, 0x203a, 0x153, 0x9d, 0x17e, 0x178,
     ];
 
     let mapped = if (0x80..=0x9f).contains(&value) {
