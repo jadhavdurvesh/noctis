@@ -973,7 +973,10 @@ mod tests {
         assert_eq!(removed.name(), Some("p"));
         assert!(main.children().is_empty());
         assert!(main.append_child(removed).is_ok());
-        assert_eq!(tree.to_html(), "<main class=\"content\"><p id=\"target\">Hello &amp; welcome</p></main>");
+        assert_eq!(
+            tree.to_html(),
+            "<main class=\"content\"><p id=\"target\">Hello &amp; welcome</p></main>"
+        );
     }
 
     #[test]
