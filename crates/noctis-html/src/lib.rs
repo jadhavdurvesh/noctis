@@ -1089,25 +1089,6 @@ fn is_head_content(node: &Node) -> bool {
     )
 }
 
-fn find_doctype(source: &str) -> Option<String> {
-    let lower = source.to_ascii_lowercase();
-    let start = lower.find("<!doctype")? + "<!doctype".len();
-    let tail = &source[start..];
-    let name_start = tail
-        .find(|ch: char| !ch.is_whitespace())
-        .unwrap_or(tail.len());
-    let tail = &tail[name_start..];
-    let name_end = tail
-        .find(|ch: char| !is_name_char(ch))
-        .unwrap_or(tail.len());
-    let name = tail[..name_end].trim();
-    Some(if name.is_empty() {
-        "html".into()
-    } else {
-        name.to_ascii_lowercase()
-    })
-}
-
 /// Backwards-compatible alias for fragment parsing.
 pub fn parse(source: &str) -> Node {
     parse_fragment(source)
