@@ -932,6 +932,7 @@ pub fn parse_document(source: &str) -> Node {
     for child in fragment_children {
         match child {
             Node::Doctype(name) if doctype.is_none() => doctype = Some(name),
+            Node::Doctype(_) => {}
             Node::Element {
                 name,
                 attributes,
@@ -1165,6 +1166,27 @@ mod tests {
         let textarea = &tree.elements_by_tag_name("textarea")[0];
         assert_eq!(title.text_content(), "A & B <titleish>");
         assert_eq!(textarea.text_content(), "<ok>");
+    }
+
+    #[test]
+    fn decodes_complete_named_entity_table_including_long_and_multi_codepoint_names() {
+        assert_eq!(
+            NAMED_ENTITY_DATA.lines().count(),
+            2231,
+            "generated table should contain the complete HTML5 named-reference set"
+        );
+        assert_eq!(
+            decode_character_references(
+                "&CounterClockwiseContourIntegral; &NotEqualTilde; &ThickSpace; &AMP;"
+            ),
+            "∳ ≂̸    &"
+        );
+        assert_eq!(decode_character_references("&copy"), "©");
+        assert_eq!(decode_character_references("&notit;"), "¬it;");
+        assert_eq!(
+            decode_character_references_in_attribute("&notit; &amp= &copy"),
+            "&notit; &amp= ©"
+        );
     }
 
     #[test]
