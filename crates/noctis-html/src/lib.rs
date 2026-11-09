@@ -336,41 +336,121 @@ fn starts_with_ascii_case_insensitive(chars: &[char], index: usize, pattern: &st
             .all(|(left, right)| left.eq_ignore_ascii_case(right))
 }
 
-fn named_character_reference(name: &str) -> Option<char> {
-    Some(match name {
-        "amp" => '&',
-        "lt" => '<',
-        "gt" => '>',
-        "quot" => '"',
-        "apos" => '\'',
-        "nbsp" => '\u{00a0}',
-        "copy" => '\u{00a9}',
-        "reg" => '\u{00ae}',
-        "trade" => '\u{2122}',
-        "hellip" => '\u{2026}',
-        "mdash" => '\u{2014}',
-        "ndash" => '\u{2013}',
-        "euro" => '\u{20ac}',
-        "pound" => '\u{00a3}',
-        "cent" => '\u{00a2}',
-        "yen" => '\u{00a5}',
-        "sect" => '\u{00a7}',
-        "para" => '\u{00b6}',
-        "middot" => '\u{00b7}',
-        "laquo" => '\u{00ab}',
-        "raquo" => '\u{00bb}',
-        "times" => '\u{00d7}',
-        "divide" => '\u{00f7}',
-        "plusmn" => '\u{00b1}',
-        "deg" => '\u{00b0}',
-        "micro" => '\u{00b5}',
-        "bull" => '\u{2022}',
-        "rsquo" => '\u{2019}',
-        "lsquo" => '\u{2018}',
-        "rdquo" => '\u{201d}',
-        "ldquo" => '\u{201c}',
-        _ => return None,
-    })
+const NAMED_ENTITY_DATA: &str = include_str!("named_entities.tsv");
+
+fn named_entity_value(name: &str) -> Option<String> {
+    let rows: Vec<&str> = NAMED_ENTITY_DATA.lines().collect();
+    let index = rows
+        .binary_search_by(|row| {
+            row.split_once('\t')
+                .map_or("", |(entity_name, _)| entity_name)
+                .cmp(name)
+        })
+        .ok()?;
+    let (_, codepoints) = rows[index].split_once('\t')?;
+    codepoints
+        .split(',')
+        .map(|value| u32::from_str_radix(value, 16).ok().and_then(char::from_u32))
+        .collect()
+}
+
+fn decode_character_references_with_context(input: &str, in_attribute: bool) -> String {
+    let chars: Vec<char> = input.chars().collect();
+    let mut output = String::with_capacity(input.len());
+    let mut index = 0;
+
+    while index < chars.len() {
+        if chars[index] != '&' {
+            output.push(chars[index]);
+            index += 1;
+            continue;
+        }
+
+        let start = index;
+        let mut cursor = index + 1;
+        if cursor < chars.len() && chars[cursor] == '#' {
+            cursor += 1;
+            let is_hex = cursor < chars.len() && matches!(chars[cursor], 'x' | 'X');
+            if is_hex {
+                cursor += 1;
+            }
+            let digits_start = cursor;
+            while cursor < chars.len()
+                && if is_hex {
+                    chars[cursor].is_ascii_hexdigit()
+                } else {
+                    chars[cursor].is_ascii_digit()
+                }
+            {
+                cursor += 1;
+            }
+
+            if cursor > digits_start {
+                let digits: String = chars[digits_start..cursor].iter().collect();
+                let parsed = if is_hex {
+                    u32::from_str_radix(&digits, 16)
+                } else {
+                    digits.parse::<u32>()
+                };
+                if cursor < chars.len() && chars[cursor] == ';' {
+                    cursor += 1;
+                }
+                match parsed {
+                    Ok(value) => output.push(numeric_character_reference(value)),
+                    Err(_) => output.push('\\u{fffd}'),
+                }
+                index = cursor;
+                continue;
+            }
+        } else {
+            while cursor < chars.len()
+                && cursor - start <= 32
+                && (chars[cursor].is_ascii_alphanumeric() || chars[cursor] == ';')
+            {
+                cursor += 1;
+            }
+
+            let max_end = cursor;
+            let mut matched = None;
+            for end in (start + 1..=max_end).rev() {
+                let candidate: String = chars[start + 1..end].iter().collect();
+                if let Some(value) = named_entity_value(&candidate) {
+                    let has_semicolon = candidate.ends_with(';');
+                    let next = chars.get(end).copied();
+                    let ambiguous_attribute_match = in_attribute
+                        && !has_semicolon
+                        && next.is_some_and(|ch| ch.is_ascii_alphanumeric() || ch == '=');
+                    if ambiguous_attribute_match {
+                        matched = None;
+                        break;
+                    }
+                    matched = Some((value, end));
+                    break;
+                }
+            }
+
+            if let Some((value, end)) = matched {
+                output.push_str(&value);
+                index = end;
+                continue;
+            }
+        }
+
+        output.push('&');
+        index += 1;
+    }
+
+    output
+}
+
+/// Decode the complete HTML named-character-reference table and numeric references.
+pub fn decode_character_references(input: &str) -> String {
+    decode_character_references_with_context(input, false)
+}
+
+/// Decode character references using the HTML attribute ambiguous-ampersand rule.
+pub fn decode_character_references_in_attribute(input: &str) -> String {
+    decode_character_references_with_context(input, true)
 }
 
 fn numeric_character_reference(value: u32) -> char {
@@ -660,7 +740,7 @@ fn tokenize(source: &str) -> Vec<Token> {
                         if index < chars.len() {
                             index += 1;
                         }
-                        Some(decode_character_references(&raw_value))
+                        Some(decode_character_references_in_attribute(&raw_value))
                     } else {
                         let value_start = index;
                         while index < chars.len()
