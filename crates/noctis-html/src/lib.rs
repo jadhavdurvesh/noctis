@@ -755,6 +755,113 @@ fn children_at_path_mut<'a>(root: &'a mut Node, path: &[usize]) -> &'a mut Vec<N
     }
 }
 
+fn is_formatting_element(name: &str) -> bool {
+    matches!(
+        name,
+        "a" | "b" | "big" | "code" | "em" | "font" | "i" | "s" | "small" | "strike"
+            | "strong" | "tt" | "u"
+    )
+}
+
+fn insert_foster_node(root: &mut Node, stack: &mut [OpenElement], node: Node) -> Option<Vec<usize>> {
+    let table = stack.iter().rposition(|element| element.name == "table")?;
+    let table_path = stack[table].path.clone();
+    let table_index = *table_path.last()?;
+    let parent_path = table_path[..table_path.len() - 1].to_vec();
+
+    children_at_path_mut(root, &parent_path).insert(table_index, node);
+    for element in stack.iter_mut() {
+        if element.path.len() > parent_path.len()
+            && element.path[..parent_path.len()] == parent_path
+            && element.path[parent_path.len()] >= table_index
+        {
+            element.path[parent_path.len()] += 1;
+        }
+    }
+
+    let mut foster_path = parent_path;
+    foster_path.push(table_index);
+    Some(foster_path)
+}
+
+fn append_open_element(
+    root: &mut Node,
+    stack: &mut Vec<OpenElement>,
+    name: String,
+    attributes: Vec<Attribute>,
+) {
+    let parent_path = stack
+        .last()
+        .map_or_else(Vec::new, |element| element.path.clone());
+    let children = children_at_path_mut(root, &parent_path);
+    let child_index = children.len();
+    children.push(Node::Element {
+        name: name.clone(),
+        attributes,
+        children: Vec::new(),
+    });
+    let mut path = parent_path;
+    path.push(child_index);
+    stack.push(OpenElement { path, name });
+}
+
+fn close_misnested_formatting_element(
+    root: &mut Node,
+    stack: &mut Vec<OpenElement>,
+    name: &str,
+) -> bool {
+    let Some(position) = stack.iter().rposition(|element| element.name == name) else {
+        return false;
+    };
+
+    if !is_formatting_element(name) {
+        stack.truncate(position);
+        return true;
+    }
+
+    let reopen: Vec<(String, Vec<Attribute>)> = stack
+        .iter()
+        .skip(position + 1)
+        .filter(|element| is_formatting_element(&element.name))
+        .filter_map(|element| match node_at_path(root, &element.path) {
+            Node::Element { name, attributes, .. } => Some((name.clone(), attributes.clone())),
+            _ => None,
+        })
+        .collect();
+
+    let parent_path = stack[position].path[..stack[position].path.len() - 1].to_vec();
+    stack.truncate(position);
+
+    let mut current_parent = parent_path;
+    for (reopen_name, attributes) in reopen {
+        let children = children_at_path_mut(root, &current_parent);
+        let child_index = children.len();
+        children.push(Node::Element {
+            name: reopen_name.clone(),
+            attributes,
+            children: Vec::new(),
+        });
+        current_parent.push(child_index);
+        stack.push(OpenElement {
+            path: current_parent.clone(),
+            name: reopen_name,
+        });
+    }
+    true
+}
+
+fn is_table_section(name: &str) -> bool {
+    matches!(name, "tbody" | "thead" | "tfoot")
+}
+
+fn is_table_structure_tag(name: &str) -> bool {
+    matches!(
+        name,
+        "caption" | "col" | "colgroup" | "tbody" | "td" | "tfoot" | "th" | "thead" | "tr"
+            | "style" | "script" | "template"
+    )
+}
+
 fn close_open_element(stack: &mut Vec<OpenElement>, name: &str) {
     if let Some(position) = stack.iter().rposition(|element| element.name == name) {
         stack.truncate(position);
@@ -781,6 +888,7 @@ fn apply_implied_end_tags(stack: &mut Vec<OpenElement>, incoming: &str) {
         }
         "tr" => close_open_element(stack, "tr"),
         "td" | "th" => close_one_of(stack, &["td", "th"]),
+        "tbody" | "thead" | "tfoot" => close_one_of(stack, &["tbody", "thead", "tfoot"]),
         "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
             close_one_of(stack, &["h1", "h2", "h3", "h4", "h5", "h6"]);
         }
@@ -802,6 +910,12 @@ pub fn parse_fragment(source: &str) -> Node {
     for token in tokenize(source) {
         match token {
             Token::Text(text) => {
+                let in_table = open_elements.iter().any(|element| element.name == "table");
+                if in_table && !text.chars().all(char::is_whitespace) {
+                    if insert_foster_node(&mut root, &mut open_elements, Node::Text(text)).is_some() {
+                        continue;
+                    }
+                }
                 let path = open_elements
                     .last()
                     .map_or(&[][..], |element| element.path.as_slice());
@@ -825,23 +939,66 @@ pub fn parse_fragment(source: &str) -> Node {
                 self_closing,
             } => {
                 apply_implied_end_tags(&mut open_elements, &name);
-                let path = open_elements
-                    .last()
-                    .map_or_else(Vec::new, |element| element.path.clone());
-                let children = children_at_path_mut(&mut root, &path);
-                let child_index = children.len();
-                children.push(Node::Element {
-                    name: name.clone(),
-                    attributes,
-                    children: Vec::new(),
-                });
+
+                if open_elements.iter().any(|element| element.name == "table") {
+                    let top = open_elements.last().map(|element| element.name.as_str());
+                    if name == "tr" && top == Some("table") {
+                        append_open_element(
+                            &mut root,
+                            &mut open_elements,
+                            "tbody".into(),
+                            Vec::new(),
+                        );
+                    } else if matches!(name.as_str(), "td" | "th") {
+                        if top == Some("table") {
+                            append_open_element(
+                                &mut root,
+                                &mut open_elements,
+                                "tbody".into(),
+                                Vec::new(),
+                            );
+                        }
+                        if open_elements
+                            .last()
+                            .is_some_and(|element| is_table_section(&element.name))
+                        {
+                            append_open_element(
+                                &mut root,
+                                &mut open_elements,
+                                "tr".into(),
+                                Vec::new(),
+                            );
+                        }
+                    }
+
+                    if !is_table_structure_tag(&name) && name != "table" {
+                        if let Some(path) = insert_foster_node(
+                            &mut root,
+                            &mut open_elements,
+                            Node::Element {
+                                name: name.clone(),
+                                attributes: attributes.clone(),
+                                children: Vec::new(),
+                            },
+                        ) {
+                            if !self_closing && !is_void_element(&name) {
+                                open_elements.push(OpenElement { path, name });
+                            }
+                            continue;
+                        }
+                    }
+                }
 
                 if !self_closing && !is_void_element(&name) {
-                    let mut child_path = path;
-                    child_path.push(child_index);
-                    open_elements.push(OpenElement {
-                        path: child_path,
+                    append_open_element(&mut root, &mut open_elements, name, attributes);
+                } else {
+                    let path = open_elements
+                        .last()
+                        .map_or_else(Vec::new, |element| element.path.clone());
+                    children_at_path_mut(&mut root, &path).push(Node::Element {
                         name,
+                        attributes,
+                        children: Vec::new(),
                     });
                 }
             }
@@ -864,11 +1021,12 @@ pub fn parse_fragment(source: &str) -> Node {
                         name: "p".into(),
                     });
                 }
-                if let Some(position) = open_elements
-                    .iter()
-                    .rposition(|element| element.name == name)
-                {
-                    open_elements.truncate(position);
+                if matches!(name.as_str(), "table" | "tbody" | "thead" | "tfoot" | "tr" | "td" | "th") {
+                    if let Some(position) = open_elements.iter().rposition(|element| element.name == name) {
+                        open_elements.truncate(position);
+                    }
+                } else {
+                    close_misnested_formatting_element(&mut root, &mut open_elements, &name);
                 }
             }
         }
