@@ -558,6 +558,18 @@ mod tests {
     }
 
     #[test]
+    fn document_parser_keeps_late_head_content_in_head() {
+        let tree = parse_document(
+            "<html><head></head><meta charset='utf-8'><body><p>content</p></body></html>",
+        );
+        let head = &tree.elements_by_tag_name("head")[0];
+        let body = &tree.elements_by_tag_name("body")[0];
+        assert_eq!(head.elements_by_tag_name("meta").len(), 1);
+        assert_eq!(body.elements_by_tag_name("p").len(), 1);
+        assert!(body.elements_by_tag_name("meta").is_empty());
+    }
+
+    #[test]
     fn entity_table_handles_legacy_names_and_multi_codepoint_values() {
         assert_eq!(
             crate::decode_character_references("&copy © &NotEqualTilde;"),
