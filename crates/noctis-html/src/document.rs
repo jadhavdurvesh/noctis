@@ -321,14 +321,14 @@ impl DomDocument {
         self.ensure_no_cycle(parent, child)?;
         if let Some(reference_id) = reference {
             self.node(reference_id)?;
-            if child == reference_id {
-                return Ok(());
-            }
             if self.node(reference_id)?.parent() != Some(parent) {
                 return Err(DomError::ReferenceIsNotChild {
                     parent,
                     reference: reference_id,
                 });
+            }
+            if child == reference_id {
+                return Ok(());
             }
         }
 
