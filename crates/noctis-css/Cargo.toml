@@ -1,0 +1,10 @@
+[package]
+name = "noctis-css"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[dependencies]
+noctis-core = { path = "../noctis-core" }
