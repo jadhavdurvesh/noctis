@@ -4,26 +4,38 @@
 - [x] Project identity and no-existing-engine rule.
 - [x] Rust workspace and subsystem boundaries.
 - [x] Project-specific restricted source license.
-- [x] Initial tokenizer/tree-builder slice and CLI harness.
+- [x] Parser CLI harness and example document.
 - [x] Cross-platform CI for Linux and Windows.
-- [x] Zero-external-dependency foundation and Cargo lockfile.
+- [x] Zero-runtime-dependency Rust workspace and Cargo lockfile.
 
 ## Phase 1 — HTML and DOM
 - [x] Tokenize basic start/end tags, text, comments, and doctypes.
-- [x] Parse quoted, unquoted, and boolean attributes.
-- [x] Preserve first duplicate attribute.
-- [x] Decode a documented subset of named and numeric character references.
-- [x] Handle raw-text elements and RCDATA elements.
-- [x] Handle void elements and selected common implied end tags.
-- [x] DOM queries by ID and tag name; text-content extraction.
-- [x] DOM attribute mutation and child append/removal.
-- [x] Basic HTML serialization and diagnostic tree output.
-- [ ] Complete named character-reference table and exact HTML tokenizer states.
-- [ ] Full HTML tree-construction algorithm, insertion modes, foster parenting,
-      adoption agency algorithm, template contents, and document modes.
-- [ ] DOM node identity, parent/sibling APIs, document fragments, events,
-      namespaces, and standards-compatible mutation behavior.
-- [ ] Differential testing against HTML parser conformance suites.
+- [x] Parse quoted, unquoted, and boolean attributes; preserve first duplicate.
+- [x] Decode the full 2,231-entry HTML named-character-reference table.
+- [x] Decode numeric references, including Windows-1252 remapping and invalid values.
+- [x] Apply the attribute ambiguous-ampersand rule for legacy references.
+- [x] Handle raw-text elements, RCDATA elements, and void elements.
+- [x] Handle selected implied end tags and malformed closing tags.
+- [x] Build an `html/head/body` document skeleton with scoped document insertion modes.
+- [x] Implement selected table recovery: foster-parent stray table content and insert
+      implicit `tbody` / `tr` in common cases.
+- [x] Implement a basic inline-formatting reopen repair for common misnested tags.
+- [x] Add arena-backed DOM IDs, parent/child/previous-sibling/next-sibling queries,
+      reparenting, insert-before, removal, attributes, subtree search, and text content.
+- [x] Add basic HTML serialization and diagnostic tree output.
+- [x] Add targeted regression tests for entities, document structure, table recovery,
+      formatting recovery, DOM identity, and mutation.
+- [ ] Implement all HTML tokenizer states and exact error-recovery behavior.
+- [ ] Implement every HTML tree-construction insertion mode, including the complete
+      adoption-agency algorithm, foster-parenting rules, templates, and foreign content.
+- [ ] Implement document-mode/quirks handling and standards-complete fragment contexts.
+- [ ] Extend the DOM with document fragments, node types, namespaces, events, and
+      fully standards-compatible hierarchy/mutation constraints.
+- [ ] Differential-test against upstream HTML parser conformance suites (including
+      broad Web Platform Tests coverage).
+
+The checked HTML items describe the implementation that exists in this repository;
+they do not claim full HTML Living Standard conformance.
 
 ## Phase 2 — CSS
 - [ ] CSS tokenizer and parser.
@@ -50,6 +62,4 @@
 - [ ] SAND OS backend.
 - [ ] Web-platform conformance and security testing.
 
-A checked item means implemented in this repository, not full standards
-conformance. The checked HTML features are an experimental subset; NOCTIS is
-not yet suitable for browsing untrusted internet content.
+NOCTIS is experimental and is not suitable for browsing untrusted internet content.
