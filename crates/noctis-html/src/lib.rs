@@ -893,7 +893,8 @@ mod tests {
         let tree = parse("<p>a<br>b</p>");
         let paragraph = &tree.children()[0];
         assert_eq!(paragraph.text_content(), "ab");
-        assert_eq!(paragraph.children().len(), 2);
+        assert_eq!(paragraph.children().len(), 3);
+        assert_eq!(paragraph.children()[1].name(), Some("br"));
     }
 
     #[test]
