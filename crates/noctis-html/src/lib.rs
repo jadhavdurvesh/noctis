@@ -957,7 +957,24 @@ pub fn parse_fragment(source: &str) -> Node {
 ///
 /// This implements common document setup and head/body routing for the currently
 /// supported subset. It is not the full HTML Living Standard insertion-mode algorithm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DocumentInsertionMode {
+    BeforeHtml,
+    BeforeHead,
+    InHead,
+    AfterHead,
+    InBody,
+}
+
+/// Parse a complete HTML document into an `html/head/body` document skeleton.
+///
+/// This implements a deliberately scoped set of document insertion modes and
+/// common head/body recovery. It is not the complete HTML Living Standard
+/// tree-construction algorithm (table foster parenting, adoption agency,
+/// templates, foreign-content integration, and document mode are still pending).
 pub fn parse_document(source: &str) -> Node {
+    use std::collections::VecDeque;
+
     let fragment = parse_fragment(source);
     let Node::Document(fragment_children) = fragment else {
         unreachable!("fragment parser always returns a document node");
@@ -978,95 +995,136 @@ pub fn parse_document(source: &str) -> Node {
         attributes: Vec::new(),
         children: Vec::new(),
     };
+    let mut html_attributes = Vec::new();
+    let mut head_attributes = Vec::new();
+    let mut body_attributes = Vec::new();
+    let mut doctype = None;
 
-    let mut explicit_html_attrs = Vec::new();
-    let mut explicit_head_attrs = Vec::new();
-    let mut explicit_body_attrs = Vec::new();
-    let mut saw_head = false;
-    let mut saw_body = false;
-    let mut in_head = true;
-
+    // Unwrap an explicit html element while preserving source order.
+    let mut pending = VecDeque::new();
     for child in fragment_children {
         match child {
-            Node::Doctype(_) => {
-                // The document doctype is preserved as the first document child.
-                // Store it separately below to keep exactly one doctype in output.
+            Node::Doctype(name) if doctype.is_none() => doctype = Some(name),
+            Node::Element {
+                name,
+                attributes,
+                children,
+            } if name == "html" => {
+                merge_attributes(&mut html_attributes, attributes);
+                pending.extend(children);
             }
-            Node::Element { name, attributes, children } if name == "html" => {
-                explicit_html_attrs.extend(attributes);
-                for nested in children {
-                    match nested {
-                        Node::Element { name, attributes, children } if name == "head" => {
-                            explicit_head_attrs.extend(attributes);
-                            saw_head = true;
-                            for item in children {
-                                head.append_child(item).expect("head is a container");
-                            }
-                        }
-                        Node::Element { name, attributes, children } if name == "body" => {
-                            explicit_body_attrs.extend(attributes);
-                            saw_body = true;
-                            for item in children {
-                                body.append_child(item).expect("body is a container");
-                            }
-                        }
-                        other => {
-                            if in_head && is_head_content(&other) {
-                                head.append_child(other).expect("head is a container");
-                            } else {
-                                in_head = false;
-                                body.append_child(other).expect("body is a container");
-                            }
-                        }
-                    }
+            other => pending.push_back(other),
+        }
+    }
+
+    let mut mode = DocumentInsertionMode::BeforeHtml;
+    while let Some(node) = pending.pop_front() {
+        if matches!(node, Node::Doctype(_)) {
+            continue;
+        }
+
+        match node {
+            Node::Element {
+                name,
+                attributes,
+                children,
+            } if name == "head" => {
+                merge_attributes(&mut head_attributes, attributes);
+                if matches!(mode, DocumentInsertionMode::BeforeHtml | DocumentInsertionMode::BeforeHead | DocumentInsertionMode::InHead) {
+                    append_nodes(&mut head, children);
+                    mode = DocumentInsertionMode::AfterHead;
+                } else {
+                    // Duplicate or misplaced head wrappers are ignored as wrappers.
+                    pending.extend(children);
                 }
             }
-            Node::Element { name, attributes, children } if name == "head" && !saw_head => {
-                explicit_head_attrs.extend(attributes);
-                saw_head = true;
-                for item in children {
-                    head.append_child(item).expect("head is a container");
-                }
-            }
-            Node::Element { name, attributes, children } if name == "body" && !saw_body => {
-                in_head = false;
-                explicit_body_attrs.extend(attributes);
-                saw_body = true;
-                for item in children {
-                    body.append_child(item).expect("body is a container");
-                }
+            Node::Element {
+                name,
+                attributes,
+                children,
+            } if name == "body" => {
+                merge_attributes(&mut body_attributes, attributes);
+                append_nodes(&mut body, children);
+                mode = DocumentInsertionMode::InBody;
             }
             other => {
-                if in_head && is_head_content(&other) {
-                    head.append_child(other).expect("head is a container");
-                } else {
-                    in_head = false;
-                    body.append_child(other).expect("body is a container");
+                if mode == DocumentInsertionMode::BeforeHtml {
+                    mode = DocumentInsertionMode::BeforeHead;
+                    pending.push_front(other);
+                    continue;
+                }
+
+                match mode {
+                    DocumentInsertionMode::BeforeHtml => unreachable!(),
+                    DocumentInsertionMode::BeforeHead => {
+                        if is_head_content(&other) || is_whitespace_text(&other) || matches!(other, Node::Comment(_)) {
+                            head.append_child(other).expect("head is a container");
+                            mode = DocumentInsertionMode::InHead;
+                        } else {
+                            body.append_child(other).expect("body is a container");
+                            mode = DocumentInsertionMode::InBody;
+                        }
+                    }
+                    DocumentInsertionMode::InHead => {
+                        if is_head_content(&other) || is_whitespace_text(&other) || matches!(other, Node::Comment(_)) {
+                            head.append_child(other).expect("head is a container");
+                        } else {
+                            // Leaving the head implicitly creates the body.
+                            mode = DocumentInsertionMode::AfterHead;
+                            pending.push_front(other);
+                        }
+                    }
+                    DocumentInsertionMode::AfterHead => {
+                        body.append_child(other).expect("body is a container");
+                        mode = DocumentInsertionMode::InBody;
+                    }
+                    DocumentInsertionMode::InBody => {
+                        body.append_child(other).expect("body is a container");
+                    }
                 }
             }
         }
     }
 
     if let Node::Element { attributes, .. } = &mut html {
-        *attributes = explicit_html_attrs;
+        *attributes = html_attributes;
     }
     if let Node::Element { attributes, .. } = &mut head {
-        *attributes = explicit_head_attrs;
+        *attributes = head_attributes;
     }
     if let Node::Element { attributes, .. } = &mut body {
-        *attributes = explicit_body_attrs;
+        *attributes = body_attributes;
     }
 
-    let mut output = Vec::new();
-    if let Some(doctype) = find_doctype(source) {
-        output.push(Node::Doctype(doctype));
-    }
     if let Node::Element { children, .. } = &mut html {
         children.push(head);
         children.push(body);
     }
+
+    let mut output = Vec::new();
+    if let Some(name) = doctype {
+        output.push(Node::Doctype(name));
+    }
     output.push(html);
     Node::Document(output)
+}
+
+fn merge_attributes(target: &mut Vec<Attribute>, incoming: Vec<Attribute>) {
+    for attribute in incoming {
+        if !target.iter().any(|existing| existing.name == attribute.name) {
+            target.push(attribute);
+        }
+    }
+}
+
+fn append_nodes(parent: &mut Node, children: Vec<Node>) {
+    for child in children {
+        parent.append_child(child).expect("document containers accept children");
+    }
+}
+
+fn is_whitespace_text(node: &Node) -> bool {
+    matches!(node, Node::Text(text) if text.chars().all(char::is_whitespace))
 }
 
 fn is_head_content(node: &Node) -> bool {
