@@ -945,7 +945,12 @@ pub fn parse_fragment(source: &str) -> Node {
             Token::Text(text) => {
                 let in_table = is_table_insertion_context(&open_elements);
                 if in_table && !text.chars().all(char::is_whitespace) {
-                    if insert_foster_node(&mut root, &mut open_elements, Node::Text(text)).is_some()
+                    if insert_foster_node(
+                        &mut root,
+                        &mut open_elements,
+                        Node::Text(text.clone()),
+                    )
+                    .is_some()
                     {
                         continue;
                     }
