@@ -182,11 +182,11 @@ impl Node {
             output
         }
 
-        fn serialize(node: &Node, output: &mut String) {
+        fn serialize(node: &Node, output: &mut String, raw_text_parent: bool) {
             match node {
                 Node::Document(children) => {
                     for child in children {
-                        serialize(child, output);
+                        serialize(child, output, false);
                     }
                 }
                 Node::Element {
@@ -207,15 +207,22 @@ impl Node {
                     }
                     output.push('>');
                     if !is_void_element(name) {
+                        let is_raw_text = raw_text_element(name);
                         for child in children {
-                            serialize(child, output);
+                            serialize(child, output, is_raw_text);
                         }
                         output.push_str("</");
                         output.push_str(name);
                         output.push('>');
                     }
                 }
-                Node::Text(text) => output.push_str(&escape_text(text, false)),
+                Node::Text(text) => {
+                    if raw_text_parent {
+                        output.push_str(text);
+                    } else {
+                        output.push_str(&escape_text(text, false));
+                    }
+                }
                 Node::Comment(comment) => {
                     output.push_str("<!--");
                     output.push_str(comment);
@@ -230,7 +237,7 @@ impl Node {
         }
 
         let mut output = String::new();
-        serialize(self, &mut output);
+        serialize(self, &mut output, false);
         output
     }
 
@@ -427,11 +434,12 @@ pub fn decode_character_references(input: &str) -> String {
                 if cursor < chars.len() && chars[cursor] == ';' {
                     cursor += 1;
                 }
-                if let Ok(value) = parsed {
-                    output.push(numeric_character_reference(value));
-                    index = cursor;
-                    continue;
+                match parsed {
+                    Ok(value) => output.push(numeric_character_reference(value)),
+                    Err(_) => output.push('\u{fffd}'),
                 }
+                index = cursor;
+                continue;
             }
         } else {
             while cursor < chars.len()
@@ -910,6 +918,10 @@ mod tests {
         let tree = parse("<script>if (a < b) value = '<tag>';</script><p>after</p>");
         let script = &tree.children()[0];
         assert_eq!(script.text_content(), "if (a < b) value = '<tag>';");
+        assert_eq!(
+            script.to_html(),
+            "<script>if (a < b) value = '<tag>';</script>"
+        );
         assert_eq!(tree.elements_by_tag_name("p").len(), 1);
     }
 
@@ -927,6 +939,7 @@ mod tests {
         assert_eq!(decode_character_references("&#0;"), "�");
         assert_eq!(decode_character_references("&#xD800;"), "�");
         assert_eq!(decode_character_references("&#x110000;"), "�");
+        assert_eq!(decode_character_references("&#999999999999999999999;"), "�");
         assert_eq!(decode_character_references("&unknown;"), "&unknown;");
     }
 
@@ -959,7 +972,8 @@ mod tests {
         let removed = main.remove_child(0).expect("remove paragraph");
         assert_eq!(removed.name(), Some("p"));
         assert!(main.children().is_empty());
-        assert_eq!(tree.to_html(), "<main class=\"content\"></main>");
+        assert!(main.append_child(removed).is_ok());
+        assert_eq!(tree.to_html(), "<main class=\"content\"><p id=\"target\">Hello &amp; welcome</p></main>");
     }
 
     #[test]
