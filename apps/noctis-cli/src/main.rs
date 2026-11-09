@@ -1,5 +1,5 @@
-use std::{env, fs, process};
 use noctis_html::parse;
+use std::{env, fs, process};
 
 fn main() {
     let Some(path) = env::args().nth(1) else {
