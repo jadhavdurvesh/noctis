@@ -1,0 +1,10 @@
+{
+  "name": "noctis-engine-probe",
+  "display_name": "NOCTIS Engine Probe",
+  "version": "0.1.0",
+  "description": "SAPP v1 loader and ring-3 syscall integration probe for NOCTIS on SAND OS. This is not a graphical browser.",
+  "architecture": "x86-32",
+  "entry": "_start",
+  "status": "loader-smoke-test",
+  "capabilities": []
+}
