@@ -208,6 +208,39 @@ mod tests {
     }
 
     #[test]
+    fn fetches_a_local_http_document_end_to_end() {
+        use std::io::Write;
+        use std::net::TcpListener;
+        use std::thread;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let body = "<html><title>Local</title><p>NOCTIS transport works</p></html>";
+        let server_body = body.to_owned();
+
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0u8; 1024];
+            let _ = stream.read(&mut request);
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\\r\\nContent-Type: text/html; charset=utf-8\\r\\nContent-Length: {}\\r\\nConnection: close\\r\\n\\r\\n{}",
+                server_body.len(),
+                server_body
+            )
+            .unwrap();
+        });
+
+        let response = fetch_url_with_limit(&format!("http://{address}/"), 4096).unwrap();
+        server.join().unwrap();
+
+        assert_eq!(response.status, 200);
+        assert_eq!(response.content_type.as_deref(), Some("text/html; charset=utf-8"));
+        assert_eq!(String::from_utf8(response.body).unwrap(), body);
+        assert_eq!(response.final_url, format!("http://{address}/"));
+    }
+
+    #[test]
     fn reads_body_with_a_hard_size_limit() {
         assert_eq!(read_bounded(Cursor::new(b"hello"), 5).unwrap(), b"hello");
         assert_eq!(
