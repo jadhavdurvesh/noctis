@@ -733,7 +733,7 @@ fn tokenize(source: &str) -> Vec<Token> {
                             index += 1;
                         }
                         let raw_value: String = chars[value_start..index].iter().collect();
-                        Some(decode_character_references(&raw_value))
+                        Some(decode_character_references_in_attribute(&raw_value))
                     }
                 } else {
                     None
@@ -1449,6 +1449,16 @@ mod tests {
             decode_character_references_in_attribute("&notit; &amp= &copy"),
             "&notit; &amp= ©"
         );
+    }
+
+    #[test]
+    fn applies_attribute_ambiguous_ampersand_rule_to_unquoted_values() {
+        let tree = parse_fragment("<p a=&notit; b=&copy c=&amp= d=one&amp;two>");
+        let paragraph = &tree.children()[0];
+        assert_eq!(paragraph.attribute("a"), Some("&notit;"));
+        assert_eq!(paragraph.attribute("b"), Some("©"));
+        assert_eq!(paragraph.attribute("c"), Some("&amp="));
+        assert_eq!(paragraph.attribute("d"), Some("one&two"));
     }
 
     #[test]
