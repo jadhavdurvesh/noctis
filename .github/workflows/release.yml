@@ -37,6 +37,7 @@ jobs:
           $stage = Join-Path $PWD "package"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           Copy-Item "target/release/noctis-cli.exe" $stage
+          Copy-Item "target/release/noctis-cli.exe" "noctis-cli.exe"
           Copy-Item "README.md" $stage
           Copy-Item "LICENSE" $stage
           $asset = "noctis-$env:PLATFORM-$($env:ARCH.ToLower()).zip"
@@ -59,7 +60,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: noctis-${{ matrix.platform }}-${{ runner.arch }}
-          path: noctis-${{ matrix.platform }}-*
+          path: |
+            noctis-${{ matrix.platform }}-*
+            noctis-cli.exe
           if-no-files-found: error
           retention-days: 30
 
