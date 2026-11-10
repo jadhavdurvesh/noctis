@@ -535,8 +535,27 @@ fn find_raw_text_end(chars: &[char], from: usize, tag_name: &str) -> Option<usiz
     None
 }
 
+fn preprocess_input(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    let mut characters = source.chars().peekable();
+    while let Some(character) = characters.next() {
+        match character {
+            '\r' => {
+                if characters.peek() == Some(&'\n') {
+                    characters.next();
+                }
+                output.push('\n');
+            }
+            '\0' => output.push('\u{fffd}'),
+            _ => output.push(character),
+        }
+    }
+    output
+}
+
 fn tokenize(source: &str) -> Vec<Token> {
-    let chars: Vec<char> = source.chars().collect();
+    let preprocessed = preprocess_input(source);
+    let chars: Vec<char> = preprocessed.chars().collect();
     let mut tokens = Vec::new();
     let mut index = 0;
     let mut raw_tag: Option<String> = None;
@@ -578,6 +597,16 @@ fn tokenize(source: &str) -> Vec<Token> {
 
         if index + 3 < chars.len() && chars[index..].starts_with(&['<', '!', '-', '-']) {
             index += 4;
+            if chars.get(index) == Some(&'>') {
+                index += 1;
+                tokens.push(Token::Comment(String::new()));
+                continue;
+            }
+            if index + 1 < chars.len() && chars[index..].starts_with(&['-', '>']) {
+                index += 2;
+                tokens.push(Token::Comment(String::new()));
+                continue;
+            }
             let start = index;
             while index + 2 < chars.len() && !chars[index..].starts_with(&['-', '-', '>']) {
                 index += 1;
@@ -609,6 +638,25 @@ fn tokenize(source: &str) -> Vec<Token> {
             } else {
                 name
             }));
+            continue;
+        }
+
+        // The HTML tokenizer treats other <! ... > and <? ... > sequences as
+        // bogus comments rather than literal text.
+        if index + 1 < chars.len()
+            && chars[index] == '<'
+            && matches!(chars[index + 1], '!' | '?')
+        {
+            index += 2;
+            let start = index;
+            while index < chars.len() && chars[index] != '>' {
+                index += 1;
+            }
+            let comment: String = chars[start..index].iter().collect();
+            if index < chars.len() {
+                index += 1;
+            }
+            tokens.push(Token::Comment(comment));
             continue;
         }
 
@@ -706,7 +754,7 @@ fn tokenize(source: &str) -> Vec<Token> {
                 }
             }
 
-            if (raw_text_element(&name) || rcdata_element(&name)) && !self_closing {
+            if raw_text_element(&name) || rcdata_element(&name) {
                 raw_tag = Some(name.clone());
             }
             tokens.push(Token::StartTag {
@@ -971,7 +1019,7 @@ pub fn parse_fragment(source: &str) -> Node {
             Token::StartTag {
                 name,
                 attributes,
-                self_closing,
+                self_closing: _,
             } => {
                 apply_implied_end_tags(&mut open_elements, &name);
 
@@ -1016,7 +1064,7 @@ pub fn parse_fragment(source: &str) -> Node {
                                 children: Vec::new(),
                             },
                         ) {
-                            if !self_closing && !is_void_element(&name) {
+                            if !is_void_element(&name) {
                                 open_elements.push(OpenElement { path, name });
                             }
                             continue;
@@ -1024,7 +1072,9 @@ pub fn parse_fragment(source: &str) -> Node {
                     }
                 }
 
-                if !self_closing && !is_void_element(&name) {
+                // In the HTML namespace the self-closing flag is ignored for
+                // ordinary HTML elements; only void elements stay closed here.
+                if !is_void_element(&name) {
                     append_open_element(&mut root, &mut open_elements, name, attributes);
                 } else {
                     let path = open_elements
@@ -1038,6 +1088,18 @@ pub fn parse_fragment(source: &str) -> Node {
                 }
             }
             Token::EndTag(name) => {
+                // A </br> end tag is a parse error that is reprocessed as <br>.
+                if name == "br" {
+                    let path = open_elements
+                        .last()
+                        .map_or(&[][..], |element| element.path.as_slice());
+                    children_at_path_mut(&mut root, path).push(Node::Element {
+                        name: "br".into(),
+                        attributes: Vec::new(),
+                        children: Vec::new(),
+                    });
+                    continue;
+                }
                 if name == "p" && !open_elements.iter().any(|element| element.name == "p") {
                     let path = open_elements
                         .last()
@@ -1485,6 +1547,36 @@ mod tests {
         let tree = parse_fragment("<b><i>one</b>two</i>");
         assert_eq!(tree.children().len(), 2);
         assert_eq!(tree.to_html(), "<b><i>one</i></b><i>two</i>");
+    }
+
+    #[test]
+    fn preprocesses_null_and_line_endings() {
+        let tree = parse_fragment("one\\0two\\r\\nthree\\rfour");
+        assert_eq!(tree.text_content(), "one�two\\nthree\\nfour");
+    }
+
+    #[test]
+    fn ignores_self_closing_flag_for_non_void_html_elements() {
+        let tree = parse_fragment("<div/>content</div><img/>");
+        assert_eq!(tree.to_html(), "<div>content</div><img>");
+    }
+
+    #[test]
+    fn reprocesses_br_end_tag_as_start_tag() {
+        let tree = parse_fragment("before</br>after");
+        assert_eq!(tree.to_html(), "before<br>after");
+    }
+
+    #[test]
+    fn treats_unrecognized_markup_declarations_as_bogus_comments() {
+        let tree = parse_fragment("<!legacy>text<?processing?>");
+        assert_eq!(tree.to_html(), "<!--legacy-->text<!--processing-->");
+    }
+
+    #[test]
+    fn handles_abruptly_closed_empty_comments() {
+        assert_eq!(parse_fragment("<!-->").to_html(), "<!---->");
+        assert_eq!(parse_fragment("<!--->").to_html(), "<!---->");
     }
 
     #[test]
