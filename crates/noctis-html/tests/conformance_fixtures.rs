@@ -50,7 +50,7 @@ fn html_parser_matches_checked_in_serialization_fixtures() {
             parse_fragment(&input).to_html()
         };
         let expected =
-            expected.trim_end_matches(|character| character == '\n' || character == '\r');
+            expected.trim_end_matches(['\n', '\r']);
 
         assert_eq!(
             actual,
