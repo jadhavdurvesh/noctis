@@ -1,0 +1,78 @@
+name: NOCTIS Android Preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - "crates/noctis-android-bridge/**"
+      - "crates/noctis-html/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/android-preview.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - "crates/noctis-android-bridge/**"
+      - "crates/noctis-html/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/android-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-debug-apk:
+    name: Build Android Engine Lab APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK and NDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018"
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Build Rust JNI libraries
+        run: |
+          cargo ndk \
+            -t arm64-v8a \
+            -t armeabi-v7a \
+            -t x86_64 \
+            -o android/app/src/main/jniLibs \
+            build --release -p noctis-android-bridge
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.9"
+          cache-provider: basic
+      - name: Assemble debug APK
+        run: gradle --no-daemon -p android :app:assembleDebug
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          apkanalyzer apk summary "$apk"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            unzip -l "$apk" | grep -q "lib/$abi/libnoctis_android_bridge.so"
+          done
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: noctis-android-engine-lab-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
