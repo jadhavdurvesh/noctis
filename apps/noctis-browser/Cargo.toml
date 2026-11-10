@@ -9,4 +9,3 @@ repository.workspace = true
 [dependencies]
 noctis-html = { path = "../../crates/noctis-html" }
 noctis-net = { path = "../../crates/noctis-net" }
-url = "=2.5.8"
