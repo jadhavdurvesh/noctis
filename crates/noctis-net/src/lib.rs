@@ -156,7 +156,7 @@ mod tests {
     fn rejects_empty_control_and_hostless_urls() {
         assert!(matches!(parse_web_url("  "), Err(NetError::InvalidUrl(_))));
         assert!(matches!(parse_web_url("https://example.com/\nheader"), Err(NetError::InvalidUrl(_))));
-        assert!(matches!(parse_web_url("https:///path"), Err(NetError::InvalidUrl(_)) | Err(NetError::MissingHost)));
+        assert!(matches!(parse_web_url("https://"), Err(NetError::InvalidUrl(_)) | Err(NetError::MissingHost)));
     }
 
     #[test]
