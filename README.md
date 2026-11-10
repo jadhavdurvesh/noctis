@@ -100,6 +100,25 @@ locations, and release workflow instructions. The release workflow runs on
 `v*` tags or manual dispatch; the Android preview workflow uploads a debug
 APK on relevant changes.
 
+## SAND OS native application package
+
+NOCTIS also has a separate SAND OS target. The
+[`sand-app/`](sand-app/README.md) directory builds a minimal x86-32
+**SAPP v1** loader probe using the pinned SAND Apps packer and inspector.
+The workflow is
+[`sand-os-app.yml`](.github/workflows/sand-os-app.yml).
+
+This is a native SAPP development package, not an Android APK or a Linux
+executable renamed to `.sapp`. The workflow compiles a freestanding ELF32/i386
+program, packs its load segment into SAPP v1, validates the package, and uploads
+the result as a GitHub Actions artifact.
+
+The current SAND kernel exposes only a test-only ring-3 syscall. It does not
+yet provide the stable windowing, graphics, filesystem, console or networking
+interfaces required by a real browser. The SAPP is therefore a loader/format
+integration probe—not a functional NOCTIS browser for SAND OS. See
+[SAND OS integration notes](docs/SAND_OS_INTEGRATION.md).
+
 ## Platform strategy
 
 The engine crates must not depend on window handles, native UI widgets, or OS
