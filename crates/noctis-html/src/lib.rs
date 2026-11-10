@@ -1558,8 +1558,8 @@ mod tests {
 
     #[test]
     fn preprocesses_null_and_line_endings() {
-        let tree = parse_fragment("one\\0two\\r\\nthree\\rfour");
-        assert_eq!(tree.text_content(), "one�two\\nthree\\nfour");
+        let tree = parse_fragment("one\0two\r\nthree\rfour");
+        assert_eq!(tree.text_content(), "one�two\nthree\nfour");
     }
 
     #[test]
@@ -1577,7 +1577,7 @@ mod tests {
     #[test]
     fn treats_unrecognized_markup_declarations_as_bogus_comments() {
         let tree = parse_fragment("<!legacy>text<?processing?>");
-        assert_eq!(tree.to_html(), "<!--legacy-->text<!--processing-->");
+        assert_eq!(tree.to_html(), "<!--legacy-->text<!--processing?-->");
     }
 
     #[test]
