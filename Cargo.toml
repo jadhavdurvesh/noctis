@@ -11,6 +11,7 @@ members = [
   "crates/noctis-js",
   "crates/noctis-platform",
   "apps/noctis-cli",
+  "apps/noctis-browser",
 ]
 
 [workspace.package]
