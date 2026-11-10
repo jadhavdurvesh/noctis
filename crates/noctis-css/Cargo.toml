@@ -8,3 +8,4 @@ repository.workspace = true
 
 [dependencies]
 noctis-core = { path = "../noctis-core" }
+noctis-html = { path = "../noctis-html" }
