@@ -124,6 +124,17 @@ pub fn fetch_url_with_limit(input: &str, max_response_bytes: usize) -> Result<Fe
     Ok(FetchResponse { requested_url, final_url, status, content_type, body })
 }
 
+
+/// Resolve a link against a document URL while enforcing the HTTP(S)-only policy.
+pub fn resolve_reference(base: &str, reference: &str) -> Result<String, NetError> {
+    let base = parse_web_url(base)?;
+    let resolved = base
+        .join(reference.trim())
+        .map_err(|error| NetError::InvalidUrl(error.to_string()))?;
+    parse_web_url(resolved.as_str())?;
+    Ok(resolved.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -155,13 +166,3 @@ mod tests {
     }
 }
 
-
-/// Resolve a link against a document URL while enforcing the HTTP(S)-only policy.
-pub fn resolve_reference(base: &str, reference: &str) -> Result<String, NetError> {
-    let base = parse_web_url(base)?;
-    let resolved = base
-        .join(reference.trim())
-        .map_err(|error| NetError::InvalidUrl(error.to_string()))?;
-    parse_web_url(resolved.as_str())?;
-    Ok(resolved.to_string())
-}
