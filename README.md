@@ -54,12 +54,16 @@ elements, table foster parenting, misnested formatting, and document parsing.
 Run them with `cargo test -p noctis-html`; see
 [`docs/HTML_CONFORMANCE.md`](docs/HTML_CONFORMANCE.md).
 
-This remains a deliberately scoped implementation, not full HTML Living
-Standard conformance. Full tokenizer states, all tree-construction insertion
-modes, the complete adoption-agency algorithm, template/foreign-content
-handling, DOM events/namespaces, and broad differential conformance testing
-remain future work. The CLI is not a graphical browser, does not fetch URLs,
-and does not execute JavaScript.
+The parser also applies input preprocessing for CR/LF and null characters,
+handles bogus comments, and includes a checked-in HTML input/expected-output
+fixture suite run by Cargo tests on Linux and Windows. This remains a
+deliberately scoped implementation, not full HTML Living Standard conformance.
+Full tokenizer states, all tree-construction insertion modes, the complete
+adoption-agency algorithm, template/foreign-content handling, DOM
+events/namespaces, and broad differential conformance testing remain future
+work. See [HTML conformance testing](docs/HTML_CONFORMANCE.md) and
+[implementation scope](docs/HTML_IMPLEMENTATION.md). The CLI is not a graphical
+browser, does not fetch URLs, and does not execute JavaScript.
 
 ## Platform strategy
 
