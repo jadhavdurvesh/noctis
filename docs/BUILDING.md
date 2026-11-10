@@ -20,8 +20,8 @@ cargo build --release -p noctis-cli
 
 The executable is written to:
 
-- Windows: `target/release/noctis-cli.exe`
-- Linux/macOS: `target/release/noctis-cli`
+- Windows: `target/release/noctis-cli.exe` and `target/release/noctis-browser.exe`
+- Linux/macOS: `target/release/noctis-cli` and `target/release/noctis-browser`
 
 Examples:
 
@@ -33,6 +33,32 @@ noctis-cli --html examples/hello.html
 noctis-cli --fragment --tree examples/hello.html
 noctis-cli --css path/to/styles.css
 ```
+
+## NOCTIS terminal browser alpha
+
+Build:
+
+```sh
+cargo build --release -p noctis-browser
+```
+
+Run:
+
+```sh
+noctis-browser https://example.com
+# or launch without an argument to get an address prompt
+noctis-browser
+```
+
+Bare hostnames default to HTTPS. In the browser prompt, enter a numbered link
+to follow it, a URL/hostname to navigate, `b` / `f` for history,
+`r` to reload, `h` for help, or `q` to quit.
+
+The app currently displays readable terminal text using NOCTIS HTML parsing.
+It supports HTML and plain-text responses, HTTP/HTTPS only, an eight-redirect
+limit, a 20-second timeout and a 5 MiB response cap. It does not yet provide
+JavaScript, CSS layout, forms, cookies, browser storage, binary downloads or
+a graphical window. See [Browser Alpha](BROWSER_ALPHA.md).
 
 `--css` prints the parsed rule structures from NOCTIS's current CSS subset.
 The CLI does not open network URLs, execute JavaScript, render pages, or
@@ -127,8 +153,8 @@ git push origin v0.1.0
 
 It produces:
 
-- Windows x64: a ZIP containing `noctis-cli.exe`, README and license.
-- Linux x64: a `.tar.gz` containing `noctis-cli`, README and license.
+- Windows x64: a ZIP containing `noctis-cli.exe`, `noctis-browser.exe`, README and license.
+- Linux x64: a `.tar.gz` containing `noctis-cli`, `noctis-browser`, README and license.
 - macOS: a `.tar.gz` containing the native CLI executable, README and license.
 - Android: a debug-signed APK with arm64-v8a, armeabi-v7a and x86_64 native
   parser libraries.
