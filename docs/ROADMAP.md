@@ -25,6 +25,15 @@
 - [x] Add basic HTML serialization and diagnostic tree output.
 - [x] Add targeted regression tests for entities, document structure, table recovery,
       formatting recovery, DOM identity, and mutation.
+- [x] Preprocess CRLF/CR line endings and replace literal NUL input characters.
+- [x] Add selected tokenizer recovery for bogus comments, abrupt empty comments,
+      the `</br>` start-tag reprocessing rule, and HTML self-closing flags.
+- [x] Apply attribute-context character-reference handling to quoted and unquoted
+      attribute values.
+- [x] Add a deterministic file-pair conformance harness and seven checked-in HTML
+      serialization fixtures, including document-mode parsing.
+- [ ] Add an adapter for upstream html5lib tokenizer fixtures and selected WPT
+      tree-construction fixtures, with explicit pass/fail/skip accounting.
 - [ ] Implement all HTML tokenizer states and exact error-recovery behavior.
 - [ ] Implement every HTML tree-construction insertion mode, including the complete
       adoption-agency algorithm, foster-parenting rules, templates, and foreign content.
