@@ -49,8 +49,7 @@ fn html_parser_matches_checked_in_serialization_fixtures() {
         } else {
             parse_fragment(&input).to_html()
         };
-        let expected =
-            expected.trim_end_matches(['\n', '\r']);
+        let expected = expected.trim_end_matches(['\n', '\r']);
 
         assert_eq!(
             actual,
