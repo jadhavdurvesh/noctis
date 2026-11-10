@@ -170,11 +170,7 @@ fn main() {
             }
             "r" | "reload" => {}
             value => {
-                let target = if let Some(url) = value.strip_prefix("open ") {
-                    Some(url.trim())
-                } else {
-                    None
-                };
+                let target = value.strip_prefix("open ").map(str::trim);
 
                 if let Some(url) = target {
                     match normalize_address(url) {
