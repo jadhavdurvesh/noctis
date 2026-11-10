@@ -44,8 +44,25 @@ cargo run -p noctis-cli -- --css path/to/styles.css
 ```
 
 The CLI supports `--tree`, `--html`, `--css`, `--fragment`, `--help`,
-and `--version`. It is a local developer tool: it does not open network
-URLs, execute JavaScript, render pages, or provide a graphical browser window.
+and `--version`. It is a local developer tool for parser inspection.
+
+### Navigable terminal browser alpha
+
+A separate `noctis-browser` application now provides a first end-to-end
+browsing loop. It fetches HTTP/HTTPS documents through NOCTIS's bounded network
+layer, parses HTML with NOCTIS, presents readable headings/paragraphs/lists,
+and supports numbered links plus back/forward/reload navigation.
+
+```sh
+cargo run --release -p noctis-browser -- https://example.com
+```
+
+Bare hostnames default to HTTPS. Only HTTP/HTTPS and HTML/plain-text responses
+are supported. The alpha does not execute JavaScript, apply CSS layout, handle
+forms/cookies/downloads, or provide a graphical window. Its presentation is
+terminal text; the graphical rendering pipeline remains under development.
+See [Browser Alpha](docs/BROWSER_ALPHA.md).
+
 
 ## Current engine implementation
 
