@@ -42,10 +42,15 @@ fn collapse_whitespace(value: &str) -> String {
 }
 
 fn find_first<'a>(node: &'a Node, tag: &str) -> Option<&'a Node> {
-    if node.name().is_some_and(|name| name.eq_ignore_ascii_case(tag)) {
+    if node
+        .name()
+        .is_some_and(|name| name.eq_ignore_ascii_case(tag))
+    {
         return Some(node);
     }
-    node.children().iter().find_map(|child| find_first(child, tag))
+    node.children()
+        .iter()
+        .find_map(|child| find_first(child, tag))
 }
 
 fn block_kind(tag: &str) -> Option<BlockKind> {
@@ -73,7 +78,10 @@ fn collect_blocks(node: &Node, output: &mut Vec<ContentBlock>) {
             }
         }
         Node::Element { name, children, .. } => {
-            if matches!(name.as_str(), "script" | "style" | "noscript" | "template" | "svg") {
+            if matches!(
+                name.as_str(),
+                "script" | "style" | "noscript" | "template" | "svg"
+            ) {
                 return;
             }
             if let Some(kind) = block_kind(name) {
@@ -84,7 +92,11 @@ fn collect_blocks(node: &Node, output: &mut Vec<ContentBlock>) {
                 return;
             }
             if name == "img" {
-                if let Some(alt) = node.attribute("alt").map(collapse_whitespace).filter(|s| !s.is_empty()) {
+                if let Some(alt) = node
+                    .attribute("alt")
+                    .map(collapse_whitespace)
+                    .filter(|s| !s.is_empty())
+                {
                     output.push(ContentBlock {
                         kind: BlockKind::Other,
                         text: format!("[Image: {alt}]"),
@@ -104,14 +116,21 @@ fn collect_links(node: &Node, base_url: &str, output: &mut Vec<PageLink>) {
     match node {
         Node::Document(children) | Node::Element { children, .. } => {
             if let Node::Element { name, .. } = node {
-                if matches!(name.as_str(), "script" | "style" | "noscript" | "template" | "svg") {
+                if matches!(
+                    name.as_str(),
+                    "script" | "style" | "noscript" | "template" | "svg"
+                ) {
                     return;
                 }
                 if name == "a" {
                     if let Some(href) = node.attribute("href") {
                         if let Ok(url) = resolve_reference(base_url, href) {
                             let text = collapse_whitespace(&node.text_content());
-                            let text = if text.is_empty() { href.trim().to_owned() } else { text };
+                            let text = if text.is_empty() {
+                                href.trim().to_owned()
+                            } else {
+                                text
+                            };
                             output.push(PageLink {
                                 number: output.len() + 1,
                                 text,
@@ -155,7 +174,11 @@ impl DocumentView {
         let mut links = Vec::new();
         collect_links(content_root, base_url, &mut links);
 
-        Self { title, blocks, links }
+        Self {
+            title,
+            blocks,
+            links,
+        }
     }
 
     /// Build a readable view of a plain-text response.
@@ -212,10 +235,22 @@ mod tests {
         "#;
         let view = DocumentView::from_html(html, "https://example.com/start");
         assert_eq!(view.title, "Example page");
-        assert!(view.blocks.iter().any(|block| block.kind == BlockKind::Heading(1)));
-        assert!(view.blocks.iter().any(|block| block.text.contains("small browser")));
-        assert!(view.blocks.iter().any(|block| block.text == "[Image: NOCTIS logo]"));
-        assert!(!view.blocks.iter().any(|block| block.text.contains("secret")));
+        assert!(view
+            .blocks
+            .iter()
+            .any(|block| block.kind == BlockKind::Heading(1)));
+        assert!(view
+            .blocks
+            .iter()
+            .any(|block| block.text.contains("small browser")));
+        assert!(view
+            .blocks
+            .iter()
+            .any(|block| block.text == "[Image: NOCTIS logo]"));
+        assert!(!view
+            .blocks
+            .iter()
+            .any(|block| block.text.contains("secret")));
         assert_eq!(view.links.len(), 1);
         assert_eq!(view.links[0].number, 1);
         assert_eq!(view.links[0].url, "https://example.com/about");
@@ -240,7 +275,10 @@ mod tests {
 
     #[test]
     fn bare_hostnames_default_to_https_and_non_web_schemes_are_rejected() {
-        assert_eq!(normalize_address("example.com").unwrap(), "https://example.com/");
+        assert_eq!(
+            normalize_address("example.com").unwrap(),
+            "https://example.com/"
+        );
         assert!(normalize_address("file:///etc/passwd").is_err());
     }
 }

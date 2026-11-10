@@ -27,10 +27,17 @@ impl std::fmt::Display for NetError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidUrl(message) => write!(formatter, "invalid URL: {message}"),
-            Self::UnsupportedScheme(scheme) => write!(formatter, "unsupported URL scheme: {scheme}"),
+            Self::UnsupportedScheme(scheme) => {
+                write!(formatter, "unsupported URL scheme: {scheme}")
+            }
             Self::MissingHost => write!(formatter, "URL has no host"),
-            Self::CredentialsNotAllowed => write!(formatter, "URLs containing embedded credentials are not allowed"),
-            Self::ResponseTooLarge { limit } => write!(formatter, "response exceeds the {limit}-byte limit"),
+            Self::CredentialsNotAllowed => write!(
+                formatter,
+                "URLs containing embedded credentials are not allowed"
+            ),
+            Self::ResponseTooLarge { limit } => {
+                write!(formatter, "response exceeds the {limit}-byte limit")
+            }
             Self::HttpStatus(status) => write!(formatter, "server returned HTTP {status}"),
             Self::Transport(message) => write!(formatter, "network error: {message}"),
             Self::Io(message) => write!(formatter, "response read error: {message}"),
@@ -56,7 +63,9 @@ pub fn parse_web_url(input: &str) -> Result<Url, NetError> {
         return Err(NetError::InvalidUrl("URL is empty".to_owned()));
     }
     if trimmed.chars().any(char::is_control) {
-        return Err(NetError::InvalidUrl("URL contains control characters".to_owned()));
+        return Err(NetError::InvalidUrl(
+            "URL contains control characters".to_owned(),
+        ));
     }
 
     let url = Url::parse(trimmed).map_err(|error| NetError::InvalidUrl(error.to_string()))?;
@@ -76,7 +85,9 @@ pub fn parse_web_url(input: &str) -> Result<Url, NetError> {
 fn read_bounded<R: Read>(reader: R, limit: usize) -> Result<Vec<u8>, NetError> {
     let mut bytes = Vec::new();
     let read_limit = u64::try_from(limit).unwrap_or(u64::MAX).saturating_add(1);
-    reader.take(read_limit).read_to_end(&mut bytes)
+    reader
+        .take(read_limit)
+        .read_to_end(&mut bytes)
         .map_err(|error| NetError::Io(error.to_string()))?;
     if bytes.len() > limit {
         return Err(NetError::ResponseTooLarge { limit });
@@ -90,7 +101,10 @@ pub fn fetch_url(input: &str) -> Result<FetchResponse, NetError> {
 }
 
 /// Fetch a resource with a caller-selected response-size limit.
-pub fn fetch_url_with_limit(input: &str, max_response_bytes: usize) -> Result<FetchResponse, NetError> {
+pub fn fetch_url_with_limit(
+    input: &str,
+    max_response_bytes: usize,
+) -> Result<FetchResponse, NetError> {
     let requested = parse_web_url(input)?;
     let requested_url = requested.to_string();
 
@@ -100,9 +114,13 @@ pub fn fetch_url_with_limit(input: &str, max_response_bytes: usize) -> Result<Fe
         .redirects(MAX_REDIRECTS)
         .build();
 
-    let response = match agent.get(requested.as_str())
+    let response = match agent
+        .get(requested.as_str())
         .set("User-Agent", "NOCTIS/0.1.0 (independent browser engine)")
-        .set("Accept", "text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.1")
+        .set(
+            "Accept",
+            "text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.1",
+        )
         .call()
     {
         Ok(response) => response,
@@ -110,9 +128,14 @@ pub fn fetch_url_with_limit(input: &str, max_response_bytes: usize) -> Result<Fe
         Err(error) => return Err(NetError::Transport(error.to_string())),
     };
 
-    if let Some(length) = response.header("Content-Length").and_then(|value| value.parse::<usize>().ok()) {
+    if let Some(length) = response
+        .header("Content-Length")
+        .and_then(|value| value.parse::<usize>().ok())
+    {
         if length > max_response_bytes {
-            return Err(NetError::ResponseTooLarge { limit: max_response_bytes });
+            return Err(NetError::ResponseTooLarge {
+                limit: max_response_bytes,
+            });
         }
     }
 
@@ -121,9 +144,14 @@ pub fn fetch_url_with_limit(input: &str, max_response_bytes: usize) -> Result<Fe
     let content_type = response.header("Content-Type").map(str::to_owned);
     let body = read_bounded(response.into_reader(), max_response_bytes)?;
 
-    Ok(FetchResponse { requested_url, final_url, status, content_type, body })
+    Ok(FetchResponse {
+        requested_url,
+        final_url,
+        status,
+        content_type,
+        body,
+    })
 }
-
 
 /// Resolve a link against a document URL while enforcing the HTTP(S)-only policy.
 pub fn resolve_reference(base: &str, reference: &str) -> Result<String, NetError> {
@@ -142,27 +170,49 @@ mod tests {
 
     #[test]
     fn accepts_http_and_https_urls() {
-        assert_eq!(parse_web_url("https://example.com/path?q=1").unwrap().host_str(), Some("example.com"));
-        assert_eq!(parse_web_url("http://127.0.0.1:8080/").unwrap().scheme(), "http");
+        assert_eq!(
+            parse_web_url("https://example.com/path?q=1")
+                .unwrap()
+                .host_str(),
+            Some("example.com")
+        );
+        assert_eq!(
+            parse_web_url("http://127.0.0.1:8080/").unwrap().scheme(),
+            "http"
+        );
     }
 
     #[test]
     fn rejects_non_web_schemes_and_embedded_credentials() {
-        assert!(matches!(parse_web_url("file:///etc/passwd"), Err(NetError::UnsupportedScheme(_))));
-        assert_eq!(parse_web_url("https://user:secret@example.com"), Err(NetError::CredentialsNotAllowed));
+        assert!(matches!(
+            parse_web_url("file:///etc/passwd"),
+            Err(NetError::UnsupportedScheme(_))
+        ));
+        assert_eq!(
+            parse_web_url("https://user:secret@example.com"),
+            Err(NetError::CredentialsNotAllowed)
+        );
     }
 
     #[test]
     fn rejects_empty_control_and_hostless_urls() {
         assert!(matches!(parse_web_url("  "), Err(NetError::InvalidUrl(_))));
-        assert!(matches!(parse_web_url("https://example.com/\nheader"), Err(NetError::InvalidUrl(_))));
-        assert!(matches!(parse_web_url("https://"), Err(NetError::InvalidUrl(_)) | Err(NetError::MissingHost)));
+        assert!(matches!(
+            parse_web_url("https://example.com/\nheader"),
+            Err(NetError::InvalidUrl(_))
+        ));
+        assert!(matches!(
+            parse_web_url("https://"),
+            Err(NetError::InvalidUrl(_)) | Err(NetError::MissingHost)
+        ));
     }
 
     #[test]
     fn reads_body_with_a_hard_size_limit() {
         assert_eq!(read_bounded(Cursor::new(b"hello"), 5).unwrap(), b"hello");
-        assert_eq!(read_bounded(Cursor::new(b"hello!"), 5), Err(NetError::ResponseTooLarge { limit: 5 }));
+        assert_eq!(
+            read_bounded(Cursor::new(b"hello!"), 5),
+            Err(NetError::ResponseTooLarge { limit: 5 })
+        );
     }
 }
-

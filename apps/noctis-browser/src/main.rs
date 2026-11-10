@@ -35,7 +35,11 @@ fn render_page(final_url: &str, response: &FetchResponse, view: &DocumentView) {
     for block in &view.blocks {
         match block.kind {
             BlockKind::Heading(level) => {
-                println!("\n{} {}", "#".repeat(level as usize), block.text.to_uppercase());
+                println!(
+                    "\n{} {}",
+                    "#".repeat(level as usize),
+                    block.text.to_uppercase()
+                );
             }
             BlockKind::Paragraph | BlockKind::Other => println!("\n{}", block.text),
             BlockKind::ListItem => println!("  • {}", block.text),
@@ -57,7 +61,11 @@ fn render_page(final_url: &str, response: &FetchResponse, view: &DocumentView) {
 fn load_page(url: &str) -> Result<(FetchResponse, DocumentView), String> {
     let response = fetch_url(url).map_err(|error| error.to_string())?;
     let final_url = response.final_url.clone();
-    let content_type = response.content_type.as_deref().unwrap_or("").to_ascii_lowercase();
+    let content_type = response
+        .content_type
+        .as_deref()
+        .unwrap_or("")
+        .to_ascii_lowercase();
 
     if content_type.contains("text/plain") {
         let text = String::from_utf8_lossy(&response.body);
@@ -98,11 +106,17 @@ fn prompt_line(prompt: &str) -> io::Result<String> {
 fn main() {
     let mut args = std::env::args().skip(1);
     let first = args.next();
-    if first.as_deref().is_some_and(|arg| arg == "-h" || arg == "--help") {
+    if first
+        .as_deref()
+        .is_some_and(|arg| arg == "-h" || arg == "--help")
+    {
         usage();
         return;
     }
-    if first.as_deref().is_some_and(|arg| arg == "-V" || arg == "--version") {
+    if first
+        .as_deref()
+        .is_some_and(|arg| arg == "-V" || arg == "--version")
+    {
         println!("NOCTIS Browser 0.1.0");
         return;
     }
@@ -180,7 +194,8 @@ fn main() {
                 } else if let Ok(number) = value.parse::<usize>() {
                     match load_page(&current_url) {
                         Ok((_, view)) => {
-                            if let Some(link) = view.links.iter().find(|link| link.number == number) {
+                            if let Some(link) = view.links.iter().find(|link| link.number == number)
+                            {
                                 let target = link.url.clone();
                                 push_history(&mut history, &mut history_index, target);
                             } else {
