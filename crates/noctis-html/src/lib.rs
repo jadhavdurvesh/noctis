@@ -643,10 +643,7 @@ fn tokenize(source: &str) -> Vec<Token> {
 
         // The HTML tokenizer treats other <! ... > and <? ... > sequences as
         // bogus comments rather than literal text.
-        if index + 1 < chars.len()
-            && chars[index] == '<'
-            && matches!(chars[index + 1], '!' | '?')
-        {
+        if index + 1 < chars.len() && chars[index] == '<' && matches!(chars[index + 1], '!' | '?') {
             index += 2;
             let start = index;
             while index < chars.len() && chars[index] != '>' {
