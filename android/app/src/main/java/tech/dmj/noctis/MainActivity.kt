@@ -107,7 +107,7 @@ class MainActivity : Activity() {
             setTextColor(0xFF17233A.toInt())
             setPadding(16, 16, 16, 16)
             setBackgroundColor(0xFFFFFFFF.toInt())
-            textIsSelectable = true
+            setTextIsSelectable(true)
         }
         val outputScroll = ScrollView(this).apply {
             addView(output)
