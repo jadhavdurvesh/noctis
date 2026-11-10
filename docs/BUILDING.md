@@ -69,6 +69,39 @@ This is a debug-signed APK for development and testing. It is not a
 production/Play Store release and does not have production signing or update
 infrastructure.
 
+## SAND OS native SAPP package
+
+NOCTIS has a separate SAND OS loader-probe target. It builds a freestanding
+ELF32/i386 executable and packages it as the SAND-native **SAPP v1** container
+using the current, pinned SAND Apps toolchain. It does not rename an ELF file
+to `.sapp`, and it does not modify the SAND OS kernel or SAND Apps repository.
+
+For a local build, install GNU Make, GCC with 32-bit output, GNU Binutils with
+i386 ELF support, Python 3.10+, and clone `jadhavdurvesh/sand-apps` beside
+the NOCTIS checkout. Then run:
+
+```sh
+make -C sand-app clean all SAND_APPS_SDK=../sand-apps
+```
+
+The outputs are:
+
+- `sand-app/build/noctis-engine-probe.elf` — intermediate ELF32/i386.
+- `sand-app/build/noctis-engine-probe.sapp` — native SAPP v1 development package.
+
+The workflow
+`.github/workflows/sand-os-app.yml` runs on probe/workflow changes, pull
+requests and manual dispatch. It checks out the SAND Apps tools at commit
+`14ba9142e0c7822b5eac2ff29c7255b67795a1d8`, builds the probe, validates the
+container with SAND Apps' own inspector, and uploads the `.sapp` as a
+30-day GitHub Actions artifact named `noctis-sand-os-sapp-x86-32`.
+
+This is a loader/format probe only. The present SAND OS userspace ABI exposes
+only a test syscall; it has no public windowing, graphics, files, console or
+networking APIs for a browser. The package is unsigned and is not a production
+installable browser. Read [SAND OS integration](SAND_OS_INTEGRATION.md)
+before treating it as a runtime application.
+
 ## GitHub Actions
 
 ### Continuous verification
