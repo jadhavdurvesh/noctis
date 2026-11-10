@@ -47,10 +47,21 @@ The checked HTML items describe the implementation that exists in this repositor
 they do not claim full HTML Living Standard conformance.
 
 ## Phase 2 — CSS
-- [ ] CSS tokenizer and parser.
-- [ ] Selectors and cascade.
-- [ ] Inheritance and computed values.
-- [ ] Box model and formatting contexts.
+- [x] CSS tokenizer subset: identifiers, strings, numbers, dimensions, percentages,
+      functions, punctuation, comments and a subset of escapes.
+- [x] Declaration-list parser with custom-property name preservation and
+      `!important` recognition.
+- [x] Compound type/ID/class/attribute selector parsing and matching.
+- [x] Basic style-rule parsing and scoped specificity/source-order/importance cascade.
+- [ ] Selector combinators, pseudo-classes and pseudo-elements.
+- [ ] Complete CSS Syntax Level 3 tokenization, parser states and error recovery.
+- [ ] Full cascade origins/layers/scope, media evaluation and inheritance.
+- [ ] Shorthand expansion, computed values and custom-property substitution.
+- [ ] Box model, formatting contexts and layout integration.
+- [ ] CSS conformance tests against upstream CSS Syntax and Selectors fixtures.
+
+The checked CSS items describe the implemented subset only; see
+[CSS_IMPLEMENTATION.md](CSS_IMPLEMENTATION.md).
 
 ## Phase 3 — Rendering
 - [ ] Layout tree and geometry.
@@ -64,11 +75,15 @@ they do not claim full HTML Living Standard conformance.
 - [ ] URL, HTTP(S), TLS, cookies, and cache.
 - [ ] Process isolation, permissions, and sandboxing.
 
-## Phase 5 — Browser product
-- [ ] Desktop shell, tabs, profiles.
-- [ ] Downloads, history, bookmarks, developer tools.
-- [ ] Windows and Linux builds.
+## Phase 5 — Browser product and packaging
+- [x] Desktop CLI package workflow for Windows, Linux and macOS.
+- [x] Android Engine Lab APK workflow for arm64-v8a, armeabi-v7a and x86_64.
+- [x] Tagged GitHub Release workflow with SHA-256 asset checksums.
+- [ ] Graphical desktop browser shell and native window lifecycle.
+- [ ] Actual browser navigation, tabs, profiles, downloads, history and bookmarks.
+- [ ] MSI/DMG/AppImage/DEB installer formats.
+- [ ] Production-signed Android APK/AAB and update/signing process.
 - [ ] SAND OS backend.
-- [ ] Web-platform conformance and security testing.
+- [ ] Web-platform conformance and browser security hardening.
 
 NOCTIS is experimental and is not suitable for browsing untrusted internet content.
