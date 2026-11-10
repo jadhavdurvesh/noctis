@@ -41,11 +41,18 @@ cargo run -p noctis-cli -- examples/hello.html
 ```
 
 The CLI parses a local HTML file and prints a debug DOM tree. The HTML subsystem
-now includes the complete 2,231-entry named character-reference table, numeric
-references, raw-text/RCDATA handling, basic document insertion modes, implied
-`html/head/body` construction, selected table foster parenting and inline
-formatting recovery, plus an arena-backed DOM with stable node IDs and
-parent/child/sibling queries and mutation.
+now includes the complete 2,231-entry named character-reference table,
+numeric references, CRLF/NUL input preprocessing, raw-text/RCDATA handling,
+bogus-comment handling, HTML void/self-closing rules, basic document insertion
+modes, implied `html/head/body` construction, selected table foster parenting
+and inline-formatting recovery, plus an arena-backed DOM with stable node IDs
+and parent/child/sibling queries and mutation.
+
+The HTML crate also has a fixture-based serialization test harness. Its
+checked-in cases cover entities, implied list items, raw script text, void
+elements, table foster parenting, misnested formatting, and document parsing.
+Run them with `cargo test -p noctis-html`; see
+[`docs/HTML_CONFORMANCE.md`](docs/HTML_CONFORMANCE.md).
 
 This remains a deliberately scoped implementation, not full HTML Living
 Standard conformance. Full tokenizer states, all tree-construction insertion
