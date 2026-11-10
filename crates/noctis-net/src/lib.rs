@@ -235,7 +235,10 @@ mod tests {
         server.join().unwrap();
 
         assert_eq!(response.status, 200);
-        assert_eq!(response.content_type.as_deref(), Some("text/html; charset=utf-8"));
+        assert_eq!(
+            response.content_type.as_deref(),
+            Some("text/html; charset=utf-8")
+        );
         assert_eq!(String::from_utf8(response.body).unwrap(), body);
         assert_eq!(response.final_url, format!("http://{address}/"));
     }
