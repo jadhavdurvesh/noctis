@@ -21,7 +21,10 @@ fn html_parser_matches_checked_in_serialization_fixtures() {
         .collect::<Vec<_>>();
     inputs.sort();
 
-    assert!(!inputs.is_empty(), "at least one HTML fixture should be present");
+    assert!(
+        !inputs.is_empty(),
+        "at least one HTML fixture should be present"
+    );
 
     for input_path in inputs {
         let file_name = input_path
@@ -46,7 +49,8 @@ fn html_parser_matches_checked_in_serialization_fixtures() {
         } else {
             parse_fragment(&input).to_html()
         };
-        let expected = expected.trim_end_matches(|character| character == '\n' || character == '\r');
+        let expected =
+            expected.trim_end_matches(|character| character == '\n' || character == '\r');
 
         assert_eq!(
             actual,
