@@ -1,0 +1,48 @@
+name: Rust formatting and workspace verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.rs"
+      - "Cargo.toml"
+      - "**/Cargo.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Format Rust sources
+        run: cargo fmt --all
+      - name: Resolve and check workspace
+        run: cargo check --workspace
+      - name: Verify formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --workspace
+      - name: Commit formatting and lockfile updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- Cargo.lock '**/*.rs'; then
+            echo "Rust sources and Cargo.lock are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.lock
+          git add '**/*.rs'
+          git commit -m "chore: format Rust and refresh Cargo.lock"
+          git push origin HEAD:main
