@@ -154,3 +154,14 @@ mod tests {
         assert_eq!(read_bounded(Cursor::new(b"hello!"), 5), Err(NetError::ResponseTooLarge { limit: 5 }));
     }
 }
+
+
+/// Resolve a link against a document URL while enforcing the HTTP(S)-only policy.
+pub fn resolve_reference(base: &str, reference: &str) -> Result<String, NetError> {
+    let base = parse_web_url(base)?;
+    let resolved = base
+        .join(reference.trim())
+        .map_err(|error| NetError::InvalidUrl(error.to_string()))?;
+    parse_web_url(resolved.as_str())?;
+    Ok(resolved.to_string())
+}
