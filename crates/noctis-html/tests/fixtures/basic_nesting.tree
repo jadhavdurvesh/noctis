@@ -1,6 +1,0 @@
-#document
-  <section id="main">
-    <h1>
-      #text "Hello"
-    <p>
-      #text "World"
