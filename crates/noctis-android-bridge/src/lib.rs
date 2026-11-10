@@ -50,7 +50,10 @@ pub extern "system" fn Java_tech_dmj_noctis_MainActivity_nativeEngineVersion(
     match env.new_string("NOCTIS Engine 0.1.0 | HTML/DOM preview") {
         Ok(value) => value.into_raw(),
         Err(_) => {
-            let _ = env.throw_new("java/lang/RuntimeException", "Could not allocate engine version");
+            let _ = env.throw_new(
+                "java/lang/RuntimeException",
+                "Could not allocate engine version",
+            );
             ptr::null_mut()
         }
     }
