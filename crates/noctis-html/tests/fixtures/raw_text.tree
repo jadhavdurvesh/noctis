@@ -1,5 +1,0 @@
-#document
-  <script>
-    #text "if (a < b) value = '<tag>';"
-  <style>
-    #text ".notice { color: red; }"
