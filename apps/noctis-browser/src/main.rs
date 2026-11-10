@@ -149,10 +149,16 @@ fn main() {
     loop {
         let current_url = history[history_index].clone();
         println!("\nOpening {current_url} ...");
-        match load_page(&current_url) {
-            Ok((response, view)) => render_page(&response.final_url, &response, &view),
-            Err(error) => eprintln!("\nNOCTIS navigation error: {error}"),
-        }
+        let current_view = match load_page(&current_url) {
+            Ok((response, view)) => {
+                render_page(&response.final_url, &response, &view);
+                Some(view)
+            }
+            Err(error) => {
+                eprintln!("\nNOCTIS navigation error: {error}");
+                None
+            }
+        };
 
         let command = match prompt_line("\nnoctis> ") {
             Ok(command) => command,
@@ -192,17 +198,15 @@ fn main() {
                         Err(error) => eprintln!("Invalid URL: {error}"),
                     }
                 } else if let Ok(number) = value.parse::<usize>() {
-                    match load_page(&current_url) {
-                        Ok((_, view)) => {
-                            if let Some(link) = view.links.iter().find(|link| link.number == number)
-                            {
-                                let target = link.url.clone();
-                                push_history(&mut history, &mut history_index, target);
-                            } else {
-                                println!("No link numbered {number} on this page.");
-                            }
+                    if let Some(view) = &current_view {
+                        if let Some(link) = view.links.iter().find(|link| link.number == number) {
+                            let target = link.url.clone();
+                            push_history(&mut history, &mut history_index, target);
+                        } else {
+                            println!("No link numbered {number} on this page.");
                         }
-                        Err(error) => eprintln!("Cannot open link: {error}"),
+                    } else {
+                        println!("No page is currently loaded.");
                     }
                 } else {
                     match normalize_address(value) {
