@@ -1,0 +1,14 @@
+[package]
+name = "noctis-android-bridge"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+jni = "0.21.1"
+noctis-html = { path = "../noctis-html" }
