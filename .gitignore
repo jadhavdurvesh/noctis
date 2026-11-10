@@ -10,3 +10,4 @@ Thumbs.db
 /android/local.properties
 /android/**/build/
 /android/app/src/main/jniLibs/
+/sand-app/build/
