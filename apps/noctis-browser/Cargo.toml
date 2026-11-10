@@ -1,0 +1,12 @@
+[package]
+name = "noctis-browser"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[dependencies]
+noctis-html = { path = "../../crates/noctis-html" }
+noctis-net = { path = "../../crates/noctis-net" }
+url = "=2.5.8"
