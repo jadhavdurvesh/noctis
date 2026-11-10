@@ -99,7 +99,13 @@ fn prompt_line(prompt: &str) -> io::Result<String> {
     print!("{prompt}");
     io::stdout().flush()?;
     let mut line = String::new();
-    io::stdin().read_line(&mut line)?;
+    let bytes = io::stdin().read_line(&mut line)?;
+    if bytes == 0 {
+        return Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "standard input was closed",
+        ));
+    }
     Ok(line.trim().to_owned())
 }
 
