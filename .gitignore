@@ -6,3 +6,7 @@
 Thumbs.db
 .vscode/
 .idea/
+/android/.gradle/
+/android/local.properties
+/android/**/build/
+/android/app/src/main/jniLibs/
