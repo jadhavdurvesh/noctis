@@ -72,15 +72,19 @@ The checked CSS items describe the implemented subset only; see
 ## Phase 4 — Runtime and network
 - [ ] Independent JavaScript virtual machine.
 - [ ] Host bindings and event loop.
-- [ ] URL, HTTP(S), TLS, cookies, and cache.
+- [x] Initial bounded HTTP/HTTPS fetch layer with URL validation, TLS transport,
+      request timeout, redirect limit and response-size cap.
+- [ ] Cookies, cache, content encodings and full charset support.
 - [ ] Process isolation, permissions, and sandboxing.
 
 ## Phase 5 — Browser product and packaging
+- [x] First terminal browser alpha: HTTP/HTTPS navigation, HTML parsing,
+      readable document extraction, numbered links and history.
 - [x] Desktop CLI package workflow for Windows, Linux and macOS.
 - [x] Android Engine Lab APK workflow for arm64-v8a, armeabi-v7a and x86_64.
 - [x] Tagged GitHub Release workflow with SHA-256 asset checksums.
 - [ ] Graphical desktop browser shell and native window lifecycle.
-- [ ] Actual browser navigation, tabs, profiles, downloads, history and bookmarks.
+- [ ] Graphical browser shell, tabs, profiles, downloads, history UI and bookmarks.
 - [ ] MSI/DMG/AppImage/DEB installer formats.
 - [ ] Production-signed Android APK/AAB and update/signing process.
 - [ ] SAND OS backend.
