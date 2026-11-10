@@ -1,0 +1,85 @@
+name: NOCTIS — SAND OS SAPP Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sand-app/**"
+      - ".github/workflows/sand-os-app.yml"
+      - "docs/SAND_OS_INTEGRATION.md"
+  pull_request:
+    paths:
+      - "sand-app/**"
+      - ".github/workflows/sand-os-app.yml"
+      - "docs/SAND_OS_INTEGRATION.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-sapp:
+    name: Build and validate SAPP v1 (x86-32)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout NOCTIS
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned SAND Apps SDK and SAPP tools
+        uses: actions/checkout@v4
+        with:
+          repository: jadhavdurvesh/sand-apps
+          ref: 14ba9142e0c7822b5eac2ff29c7255b67795a1d8
+          path: sand-apps-sdk
+
+      - name: Install native build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential binutils python3
+
+      - name: Validate app manifest
+        run: python3 -m json.tool sand-app/manifest.json > /dev/null
+
+      - name: Build ELF32 and package SAPP v1
+        run: make -C sand-app clean all SAND_APPS_SDK=../sand-apps-sdk
+
+      - name: Verify ELF target and package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          readelf -h sand-app/build/noctis-engine-probe.elf
+          readelf -l sand-app/build/noctis-engine-probe.elf
+          grep -q "Class:.*ELF32" < <(readelf -h sand-app/build/noctis-engine-probe.elf)
+          grep -q "Machine:.*Intel 80386" < <(readelf -h sand-app/build/noctis-engine-probe.elf)
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import pathlib
+
+          inspector_path = pathlib.Path("sand-apps-sdk/tools/sapp_inspect.py")
+          spec = importlib.util.spec_from_file_location("sapp_inspect", inspector_path)
+          inspector = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(inspector)
+
+          package = pathlib.Path("sand-app/build/noctis-engine-probe.sapp").read_bytes()
+          result = inspector.inspect(package)
+          assert result["version"] == 1
+          assert result["architecture"] == "x86-32"
+          assert len(result["segments"]) == 1
+          assert result["segments"][0]["permissions"] == 5
+          assert result["relocations"] == 0
+          print(json.dumps(result, indent=2))
+          print("NOCTIS SAND SAPP: VALID")
+          PY
+
+      - name: Upload NOCTIS SAPP development artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: noctis-sand-os-sapp-x86-32
+          path: |
+            sand-app/build/noctis-engine-probe.sapp
+            sand-app/build/noctis-engine-probe.elf
+            sand-app/manifest.json
+            sand-app/README.md
+          if-no-files-found: error
+          retention-days: 30
