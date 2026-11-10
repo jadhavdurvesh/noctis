@@ -1,7 +1,0 @@
-#document
-  #text "stray"
-  <table>
-    <tbody>
-      <tr>
-        <td>
-          #text "cell"
