@@ -66,6 +66,7 @@ jobs:
           path: |
             noctis-${{ matrix.platform }}-*
             noctis-cli.exe
+            noctis-browser.exe
           if-no-files-found: error
           retention-days: 30
 
