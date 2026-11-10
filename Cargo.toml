@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "crates/noctis-core",
   "crates/noctis-html",
+  "crates/noctis-android-bridge",
   "crates/noctis-css",
   "crates/noctis-layout",
   "crates/noctis-paint",
