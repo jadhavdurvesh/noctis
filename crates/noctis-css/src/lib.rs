@@ -177,7 +177,21 @@ fn remove_important(tokens: &mut Vec<Token>) -> bool {
 
 fn parse_one(tokens: &[Token]) -> Option<Declaration> {
     let colon = tokens.iter().position(|t| matches!(t, Token::Colon))?;
-    let [Token::Ident(property)] = &tokens[..colon] else { return None; };
+    let mut property_start = 0;
+    let mut property_end = colon;
+    while property_start < property_end
+        && matches!(tokens[property_start], Token::Whitespace)
+    {
+        property_start += 1;
+    }
+    while property_end > property_start
+        && matches!(tokens[property_end - 1], Token::Whitespace)
+    {
+        property_end -= 1;
+    }
+    let [Token::Ident(property)] = &tokens[property_start..property_end] else {
+        return None;
+    };
     let mut value = tokens[colon + 1..].to_vec();
     trim_ws(&mut value);
     if value.is_empty() { return None; }
